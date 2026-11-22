@@ -98,6 +98,8 @@ dependencies {
     localRuntime "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     localRuntime "org.appliedenergistics:guideme:${guideme_version}"
     localRuntime "dev.emi:emi-neoforge:${emi_version}"
+    // 自己検査で Curios の枠を読む道(CuriosStacks)も通す
+    localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'

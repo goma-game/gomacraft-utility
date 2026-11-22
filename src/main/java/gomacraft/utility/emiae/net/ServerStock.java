@@ -27,11 +27,14 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  * ⚠ 範囲の外では答えない(端末を開けない所で在庫を見せると、遊び方が変わる)。
  *
  * <p>重さ: 1 人あたり {@link #MIN_INTERVAL_TICKS} に 1 回まで、1 回に {@link StockPayloads#MAX_KEYS} 品まで。
- * 1 品は AE2 の手元の集計({@code getCachedInventory})と、パターンの表を 1 回ずつ引くだけ。
+ * 1 品は AE2 の集計({@code getCachedInventory})とパターンの表を 1 回ずつ引くだけ。
+ * ⚠ ただし AE2 は、ネットワークに在庫の見張り(レベルエミッタなど)が無いと集計を毎 tick 捨て、引かれたときに
+ * 全部の倉庫をなめて作り直す({@code StorageService#onServerEndTick})。そのとき 1 回の問い合わせの重さは、
+ * 端末を開いている人の 1 tick 分と同じ程度になる。間隔の下限はそのために長めに取る。
  */
 public final class ServerStock {
-    /** 1 人あたりの問い合わせの間隔の下限(0.5 秒)。これより早い問い合わせは黙って捨てる。 */
-    static final int MIN_INTERVAL_TICKS = 10;
+    /** 1 人あたりの問い合わせの間隔の下限(1 秒)。これより早い問い合わせは黙って捨てる。 */
+    static final int MIN_INTERVAL_TICKS = 20;
     private static final Map<ServerPlayer, Integer> LAST_TICK = new WeakHashMap<>();
 
     private ServerStock() {

@@ -12,12 +12,13 @@ import net.neoforged.neoforge.network.PacketDistributor;
 /**
  * 端末を閉じているときの在庫数(サーバへ問い合わせた答えの写し)。
  *
- * <p>問うのは一覧に見えている品だけ(描画で求められた品を溜め、1 秒に 1 回まで送る)。サーバが届かないと
+ * <p>問うのは一覧に見えている品だけ(描画で求められた品を溜め、2 秒に 1 回まで送る)。サーバが届かないと
  * 答えたら、しばらく問わない。⚠ ここでも EMI の手持ちには何も入れない(goma-org/gomabase#2286)。
  */
 public final class RemoteStock {
     static final RemoteStockCache<AEKey> CACHE = new RemoteStockCache<>(
-            /* 答えの寿命 */ 3000, /* 送る間隔 */ 1000, /* 届かないときの間 */ 10000, StockPayloads.MAX_KEYS);
+            /* 答えの寿命 */ 5000, /* 送る間隔(サーバの下限 1 秒より長く) */ 2000, /* 届かないときの間 */ 10000,
+            StockPayloads.MAX_KEYS);
     private static ClientPacketListener connection;
 
     private RemoteStock() {

@@ -13,6 +13,8 @@ import java.util.Optional;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.world.item.Items;
+import net.neoforged.fml.ModList;
+import net.neoforged.neoforge.common.util.FakePlayerFactory;
 import net.neoforged.neoforge.gametest.GameTestHolder;
 import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 
@@ -46,7 +48,10 @@ public final class EmiAeGameTests {
         Optional<FeatureStatus> status = Features.registry().status(EmiAeFeatures.STOCK_QUERY);
         helper.assertTrue(status.isPresent() && status.get().state() == FeatureState.ON,
                 "ae_stock_query は on のはず: " + status);
-        var player = helper.makeMockServerPlayerInLevel();
+        // Curios の枠を読む道(CuriosStacks)も、ここで 1 回通す(ae2wtlib の端末は Curios の枠に着けられる)
+        helper.assertTrue(ModList.get().isLoaded("curios"), "自己検査に Curios が積まれていない(Curios の道を通らない)");
+        // 仮の人は世界に入れない(入れると Curios が仮の接続へ同期を送ろうとして落ちる)
+        var player = FakePlayerFactory.getMinecraft(helper.getLevel());
         StockPayloads.Reply reply = ServerStock.answer(player, List.of(AEItemKey.of(Items.DIAMOND)));
         helper.assertFalse(reply.reachable(), "端末を持たない人に届くと答えた: " + reply);
         helper.assertTrue(reply.entries().isEmpty(), "届かないのに数を答えた: " + reply);
