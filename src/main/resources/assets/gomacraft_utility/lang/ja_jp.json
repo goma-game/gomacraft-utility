@@ -2,5 +2,21 @@
   "key.categories.gomacraft_utility": "gomacraft utility",
   "key.gomacraft_utility.ae_quick_craft": "AE: EMI の品を取り出す・作る",
   "gomacraft_utility.ae_quick_craft.unavailable": "%s はネットワークに無く、パターンもありません",
-  "gomacraft_utility.ae_quick_craft.not_an_item": "%s は手持ちへ移せず、パターンもありません"
+  "gomacraft_utility.ae_quick_craft.not_an_item": "%s は手持ちへ移せず、パターンもありません",
+  "gomacraft_utility.screenshot.button": "[Discord に投稿]",
+  "gomacraft_utility.screenshot.button.hover": "このスクショをサーバの Discord のチャンネルに投稿します。写っているチャットや名前もそのまま出ます(F1 で HUD を消して撮れます)。",
+  "gomacraft_utility.screenshot.expired": "このスクショはもう投稿できません。",
+  "gomacraft_utility.screenshot.busy": "別のスクショを送っています。少し待ってからもう一度押してください。",
+  "gomacraft_utility.screenshot.unavailable": "このサーバはスクショを受け付けていません。",
+  "gomacraft_utility.screenshot.unreadable": "スクショを読めないか、大きすぎて送れません。",
+  "gomacraft_utility.screenshot.sending": "スクショを送っています…",
+  "gomacraft_utility.screenshot.result.accepted": "サーバがスクショを受け取りました。まもなく Discord に出ます。",
+  "gomacraft_utility.screenshot.result.off": "このサーバはスクショを受け付けていません。",
+  "gomacraft_utility.screenshot.result.busy": "サーバがほかのスクショを受けています。少し待ってからもう一度押してください。",
+  "gomacraft_utility.screenshot.result.cooldown": "次のスクショは少し待ってから投稿してください。",
+  "gomacraft_utility.screenshot.result.too_large": "スクショが大きすぎて投稿できません。",
+  "gomacraft_utility.screenshot.result.bad_image": "サーバがスクショを読めませんでした。",
+  "gomacraft_utility.screenshot.result.spool_full": "投稿を待つスクショが溜まっています。しばらくしてからもう一度押してください。",
+  "gomacraft_utility.screenshot.result.broken": "スクショを最後まで受け取れませんでした。もう一度押してください。",
+  "gomacraft_utility.screenshot.result.error": "サーバがスクショを保存できませんでした。"
 }

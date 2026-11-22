@@ -2,5 +2,21 @@
   "key.categories.gomacraft_utility": "gomacraft utility",
   "key.gomacraft_utility.ae_quick_craft": "AE: take or craft the hovered EMI item",
   "gomacraft_utility.ae_quick_craft.unavailable": "%s is not in the network and has no pattern",
-  "gomacraft_utility.ae_quick_craft.not_an_item": "%s cannot be moved to your inventory and has no pattern"
+  "gomacraft_utility.ae_quick_craft.not_an_item": "%s cannot be moved to your inventory and has no pattern",
+  "gomacraft_utility.screenshot.button": "[Post to Discord]",
+  "gomacraft_utility.screenshot.button.hover": "Post this screenshot to the server's Discord channel. Chat and player names in it are posted as they are (F1 hides the HUD).",
+  "gomacraft_utility.screenshot.expired": "This screenshot can no longer be posted.",
+  "gomacraft_utility.screenshot.busy": "Another screenshot is still being sent. Try again shortly.",
+  "gomacraft_utility.screenshot.unavailable": "This server does not accept screenshots.",
+  "gomacraft_utility.screenshot.unreadable": "Could not read the screenshot, or it is too large to send.",
+  "gomacraft_utility.screenshot.sending": "Sending the screenshot...",
+  "gomacraft_utility.screenshot.result.accepted": "The server received the screenshot. It will appear on Discord shortly.",
+  "gomacraft_utility.screenshot.result.off": "This server does not accept screenshots.",
+  "gomacraft_utility.screenshot.result.busy": "The server is receiving other screenshots. Try again shortly.",
+  "gomacraft_utility.screenshot.result.cooldown": "Wait a little before posting the next screenshot.",
+  "gomacraft_utility.screenshot.result.too_large": "The screenshot is too large to post.",
+  "gomacraft_utility.screenshot.result.bad_image": "The server could not read the screenshot.",
+  "gomacraft_utility.screenshot.result.spool_full": "Too many screenshots are waiting to be posted. Try again later.",
+  "gomacraft_utility.screenshot.result.broken": "The screenshot was not received completely. Try again.",
+  "gomacraft_utility.screenshot.result.error": "The server could not save the screenshot."
 }

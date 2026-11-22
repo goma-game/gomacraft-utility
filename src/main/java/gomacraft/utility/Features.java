@@ -4,6 +4,7 @@ import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.feature.Feature;
 import gomacraft.utility.feature.FeatureConfig;
 import gomacraft.utility.feature.FeatureRegistry;
+import gomacraft.utility.screenshot.ScreenshotFeatures;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -41,6 +42,8 @@ public final class Features {
         List<Feature> features = new ArrayList<>();
         // 段 2(EMI と AE2): goma-org/gomabase#2295
         features.addAll(EmiAeFeatures.all());
+        // 段 4(スクショの Discord への投稿): goma-org/gomabase#2295
+        features.addAll(ScreenshotFeatures.all());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);
