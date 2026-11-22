@@ -44,6 +44,8 @@ public final class Features {
         features.addAll(SearchFeatures.all());
         // 段 2(EMI と AE2): goma-org/gomabase#2295
         features.addAll(EmiAeFeatures.all());
+        // 段 3(動作まわり): goma-org/gomabase#2295。専用サーバでだけ当てる直し
+        features.add(new gomacraft.utility.features.mekagun_server.MekaGunServerFix());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);

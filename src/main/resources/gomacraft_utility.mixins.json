@@ -21,5 +21,7 @@
     "mcjtylib_text.AbstractLabelMixin",
     "mcjtylib_text.WindowMixin"
   ],
-  "server": []
+  "server": [
+    "mekagun_server.ItemMekaGunMixin"
+  ]
 }

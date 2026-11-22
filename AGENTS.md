@@ -47,6 +47,8 @@
     - L1 の `MixinContractTest` が、書き忘れと group の名前の重なりを落とす。mixin と MixinExtras の注釈は、`@At`・`@Slice`・`@Group` などの決まった部品を除いて、全部 injector として見る(知らない注釈を素通りさせない)。
   - mixin の中身と event の listener は `Features.guard("<機能>", () -> …)` で包む。有効でない機能は走らず、例外を投げた機能は FAILED になって、以後はその機能のどの部分も走らない(FAILED の機能の、当たってしまった残りの mixin を止める)。
   - 当て先のクラスは、起動時の 1 行の前に読み込ませる(`GomacraftMixinPlugin.preloadTargets`。初期化はしない)。クラスを読み込んだだけで副作用のあるものに当てるなら、先にここで困らないかを確かめる。
+  - 自己検査(gametest のサーバ)で当てる先の Mod を動かすときは `localRuntime` に足す(公式の maven が無い Mod は cursemaven —— gomabase の配布と同じ取得元)。
+  - 専用サーバだけで要る直し(クライアントの部品をサーバで呼ぶ不具合など)は、mixin の設定の `server` の一覧に置く(シングルプレイの内蔵サーバには当てない)。
   - 通信を足すときは payload を全部 `optional()` にし、送る前に相手がその channel を持つかを確かめる(`hasChannel`。この Mod の無い相手もいる)。
 - 起動時の状態の 1 行の形(`StatusLine`)は gomabase の起動の検証との約束。変えるときは gomabase の読み手(`tools/mc-client-boot.py`・`tools/scan-server-logs.py`)と同時に変える(見本の文字列を両方の試験に置いてある)。jar の名前(`gomacraft_utility-<mod_version>.jar`)も約束(`check-build.sh jar` が固定する)。
 - release: `gradle.properties` の `mod_version` を上げた PR をマージしてから、main の commit に `v<mod_version>` の tag を付けて `git push origin refs/tags/v<mod_version>` で押す(`git push origin v<mod_version>` の形は、GitHome のフックが恒久の枝への push として止める)。release の workflow が検査を回し、jar と sha256 を GitHub Release に置く(同じ tag の作り直しはしない —— gomabase が sha256 をピンする)。

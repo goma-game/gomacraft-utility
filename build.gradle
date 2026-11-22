@@ -94,6 +94,19 @@ configurations {
     selftestRuntimeClasspath.extendsFrom localRuntime
 }
 
+// 段 3(動作まわり): Mekanism は公式の maven、MekaWeapons は CurseForge のファイルを maven の形で引く
+// (gomabase の配布も同じ取得元 cursemaven を使う)
+repositories {
+    exclusiveContent {
+        forRepository { maven { url = 'https://modmaven.dev/' } }
+        filter { includeGroup 'mekanism' }
+    }
+    exclusiveContent {
+        forRepository { maven { url = 'https://cursemaven.com' } }
+        filter { includeGroup 'curse.maven' }
+    }
+}
+
 dependencies {
     // 段 2(EMI と AE2): 版は gradle.properties
     compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
@@ -116,6 +129,14 @@ dependencies {
     testRuntimeOnly "maven.modrinth:natures-compass:${natures_compass_version}"
     testRuntimeOnly "maven.modrinth:explorers-compass:${explorers_compass_version}"
     testRuntimeOnly "maven.modrinth:mcjtylib:${mcjtylib_version}"
+    // 段 3(動作まわり)mekagun_server: 型(SoundEventRegistryObject・IEnergyContainer)だけを使う。
+    // MekaWeapons は CurseForge のプロジェクト 929829。自己検査で専用サーバの例外を再現・確かめる
+    compileOnly "mekanism:Mekanism:${mekanism_version}"
+    selftestCompileOnly "mekanism:Mekanism:${mekanism_version}"
+    localRuntime "mekanism:Mekanism:${mekanism_version}"
+    localRuntime "curse.maven:mekanism-weapons-929829:${mekaweapons_file}"
+    testRuntimeOnly "mekanism:Mekanism:${mekanism_version}"
+    testRuntimeOnly "curse.maven:mekanism-weapons-929829:${mekaweapons_file}"
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
