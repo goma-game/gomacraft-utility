@@ -77,10 +77,20 @@ repositories {
     }
 }
 
+// 手元と自己検査で動かすときだけ積む Mod(配る jar と、その依存の宣言には入らない)
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+    selftestRuntimeClasspath.extendsFrom localRuntime
+}
+
 dependencies {
     // 段 2(EMI と AE2): 版は gradle.properties
     compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     compileOnly "dev.emi:emi-neoforge:${emi_version}"
+    localRuntime "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    localRuntime "org.appliedenergistics:guideme:${guideme_version}"
+    localRuntime "dev.emi:emi-neoforge:${emi_version}"
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
