@@ -8,11 +8,17 @@ import appeng.helpers.WirelessTerminalMenuHost;
 import appeng.items.tools.powered.WirelessTerminalItem;
 import appeng.menu.locator.MenuLocators;
 import gomacraft.utility.Features;
+import gomacraft.utility.GomacraftUtility;
 import gomacraft.utility.emiae.EmiAeFeatures;
+import gomacraft.utility.feature.FeatureRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.bus.api.IEventBus;
@@ -28,7 +34,12 @@ import net.neoforged.neoforge.network.registration.PayloadRegistrar;
  * 端末が実際につながる所なら見せる)。つながるかは、端末の Mod 自身の判定に任せる: 端末の item から AE2 の
  * 端末の host を作り({@code IMenuItem#getMenuHost})、その接続の状態({@code getLinkStatus})と、つながる先の口
  * ({@code getActionableNode})を読む。AE2 の端末ならアクセスポイントの範囲と電力、ae2wtlib の端末なら量子ブリッジの
- * カードの道もその Mod の判定で入る(判定を写さない)。host を作るときに端末は電力を使わない(試しの引き出しだけ)。
+ * カードの道もその Mod の判定で入る(判定を写さない)。
+ * ⚠ host を作るときの電力: AE2 の端末は試しの引き出しだけで減らない。ae2wtlib の端末は、量子ブリッジにつながって
+ * いる間、接続の確かめ({@code consumeIdlePower(SIMULATE)})の中で端末の充電を進める処理が走り、ネットワークの
+ * 電力を引く(ae2wtlib の仕組み。問いの間隔の下限 1 秒に 1 回まで)。
+ * ⚠ 1 つの端末の判定で例外が出ても(アドオンの端末の作りの違いなど)、その端末だけを飛ばす。機能ごと止めると、
+ * 全員の在庫数が再起動まで消えるため。
  *
  * <p>重さ: 1 人あたり {@link #MIN_INTERVAL_MS} に 1 回まで、1 回に {@link StockPayloads#MAX_KEYS} 品まで。
  * 1 品は AE2 の集計({@code getCachedInventory})とパターンの表を 1 回ずつ引くだけ。
@@ -58,7 +69,8 @@ public final class ServerStock {
         PayloadRegistrar registrar = event.registrar("1").optional();
         registrar.playToServer(StockPayloads.Query.TYPE, StockPayloads.Query.CODEC, ServerStock::handle);
         registrar.playToClient(StockPayloads.Reply.TYPE, StockPayloads.Reply.CODEC,
-                (reply, context) -> Features.guard(EmiAeFeatures.STOCK,
+                // 通信の受け手は通信の機能の守りで包む(受け手の失敗で、描く機能 emi_ae_stock を止めない)
+                (reply, context) -> Features.guard(EmiAeFeatures.STOCK_QUERY,
                         () -> gomacraft.utility.emiae.client.RemoteStock.accept(reply)));
     }
 
@@ -110,18 +122,30 @@ public final class ServerStock {
             if (!(stack.getItem() instanceof WirelessTerminalItem terminal)) {
                 continue;
             }
-            // 端末の Mod 自身の判定(AE2 は範囲と電力、ae2wtlib は量子ブリッジのカードも)。host は作るときに
-            // 接続を調べる(WirelessTerminalMenuHost の組み立て)
-            if (terminal.getMenuHost(player, MenuLocators.forStack(stack), null) instanceof WirelessTerminalMenuHost<?> host
-                    && host.getLinkStatus().connected()) {
-                IGridNode node = host.getActionableNode();
-                if (node != null && node.getGrid() != null) {
-                    return node.getGrid();
+            try {
+                // 端末の Mod 自身の判定(AE2 は範囲と電力、ae2wtlib は量子ブリッジのカードも)。host は作るときに
+                // 接続を調べる(WirelessTerminalMenuHost の組み立て)
+                if (terminal.getMenuHost(player, MenuLocators.forStack(stack), null) instanceof WirelessTerminalMenuHost<?> host
+                        && host.getLinkStatus().connected()) {
+                    IGridNode node = host.getActionableNode();
+                    if (node != null && node.getGrid() != null) {
+                        return node.getGrid();
+                    }
+                }
+            } catch (RuntimeException e) {
+                // その端末だけ飛ばす。ログは品の種類ごとに最初の 1 回だけ(問いのたびに書かない)
+                String item = String.valueOf(net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()));
+                if (LOGGED_TERMINALS.add(item)) {
+                    LOGGER.warn("gomacraft_utility: ワイヤレスの端末 {} の接続を調べられないので飛ばす(以後この品は書かない): {}",
+                            item, FeatureRegistry.describe(e));
                 }
             }
         }
         return null;
     }
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GomacraftUtility.MOD_ID);
+    private static final Set<String> LOGGED_TERMINALS = ConcurrentHashMap.newKeySet();
 
     private static List<ItemStack> carried(ServerPlayer player) {
         List<ItemStack> stacks = new ArrayList<>();

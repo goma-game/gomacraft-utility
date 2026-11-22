@@ -85,6 +85,25 @@ class RemoteStockCacheTest {
     }
 
     @Test
+    void stopsShowingCountsTooOldWhenTheServerStopsAnswering() {
+        RemoteStockCache<String> c = cache();
+        c.put("a", new StockIndex.Stock(5, false), 0);
+        assertEquals(5, c.get("a", 8999).stored(), "寿命の 3 倍の内は出す");
+        assertNull(c.get("a", 9000), "寿命の 3 倍を過ぎた数は出さない");
+    }
+
+    @Test
+    void putBackReturnsKeysThatDidNotFitToTheQueue() {
+        RemoteStockCache<String> c = cache();
+        c.get("a", 0);
+        c.get("b", 0);
+        List<String> taken = c.takeDue(0);
+        assertEquals(List.of("a", "b"), taken);
+        c.putBack(List.of("b"));
+        assertEquals(List.of("b"), c.takeDue(1000), "戻した品は次の回に送る(返事の待ちに残らない)");
+    }
+
+    @Test
     void zeroAndNotCraftableIsNotShown() {
         RemoteStockCache<String> c = cache();
         c.put("a", new StockIndex.Stock(0, false), 0);

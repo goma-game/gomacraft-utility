@@ -59,7 +59,25 @@ public final class RemoteStockCache<K> {
         if (k == null || (k.stock().stored() <= 0 && !k.stock().craftable())) {
             return null;
         }
+        // 古い数は寿命の間は出し続けるが、寿命の STALE_FACTOR 倍を過ぎたら出さない(サーバが答えなくなったのに、
+        // 古い数が出続けないように)
+        if (now - k.at() >= ttlMs * STALE_FACTOR) {
+            return null;
+        }
         return k.stock();
+    }
+
+    /** 古い数を出し続ける上限(寿命の何倍まで)。 */
+    static final int STALE_FACTOR = 3;
+
+    /**
+     * {@link #takeDue} で取り出したが送らなかった品を、問う品へ戻す(送れる大きさに収まらなかった分)。返事の待ちからも外す。
+     */
+    public void putBack(List<K> keys) {
+        for (K key : keys) {
+            inFlight.remove(key);
+            wanted.add(key);
+        }
     }
 
     private boolean waiting(K key, long now) {
