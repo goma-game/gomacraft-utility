@@ -38,7 +38,11 @@ public final class Ae2SearchHistory {
     private static final int MAX_WIDTH = 180;
     private static final String FAVORITE_MARK = "★ ";
 
+    private static final int MAX_WRITE_FAILURES = 3;
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(GomacraftUtility.MOD_ID);
+
     private static SearchHistoryStore store;
+    private static int writeFailures;
     private static Path file;
     /** ↑↓で選んだ行(-1 は選んでいない)。 */
     private static int selected = -1;
@@ -88,11 +92,21 @@ public final class Ae2SearchHistory {
         }
     }
 
+    /**
+     * 書く。一時の失敗(ほかの道具がファイルを掴んでいる、など)は、続けて {@link #MAX_WRITE_FAILURES} 回までは警告だけに
+     * して次の変化で書き直す(履歴は手元の覚えにあるので失わない)。続けて越えたら、この機能を FAILED にする。
+     */
     private static void save() {
         try {
             store.save(file);
+            writeFailures = 0;
         } catch (Exception e) {
-            throw new IllegalStateException("search history unwritable: " + FeatureRegistry.describe(e), e);
+            writeFailures++;
+            if (writeFailures >= MAX_WRITE_FAILURES) {
+                throw new IllegalStateException("search history unwritable: " + FeatureRegistry.describe(e), e);
+            }
+            LOGGER.warn("gomacraft_utility: 検索語の履歴を書けない(続けて {} 回目。次の変化で書き直す): {}",
+                    writeFailures, FeatureRegistry.describe(e));
         }
     }
 
@@ -105,6 +119,11 @@ public final class Ae2SearchHistory {
     private record Box(int x, int y, int width, List<SearchHistoryStore.Entry> rows) {
         int height() {
             return rows.size() * ROW + PAD * 2;
+        }
+
+        /** 一覧の枠の中か(行の間の余白を含む。押しても下の枠へ通さない)。 */
+        boolean contains(double mouseX, double mouseY) {
+            return mouseX >= x - 1 && mouseX < x + width + 1 && mouseY >= y - 1 && mouseY < y + height() + 1;
         }
 
         int rowAt(double mouseX, double mouseY) {
@@ -205,6 +224,11 @@ public final class Ae2SearchHistory {
             return;
         }
         int row = box.rowAt(event.getMouseX(), event.getMouseY());
+        if (row < 0 && box.contains(event.getMouseX(), event.getMouseY())) {
+            // 一覧の余白。下の枠へ通さない
+            event.setCanceled(true);
+            return;
+        }
         if (row < 0) {
             if (!field.isMouseOver(event.getMouseX(), event.getMouseY())) {
                 // 欄の外を押した(focus が外れる)。今の語を記す

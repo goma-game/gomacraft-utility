@@ -11,13 +11,19 @@ final class Ae2Search {
     /**
      * 検索欄が見えていれば入れる(AE2 の responder が検索を走らせる)。AE2 の設定で外の検索(EMI)を使っていて欄が
      * 隠れているときは、EMI の検索欄へ入れる(AE2 はそちらを読む)。
+     *
+     * @return 入れられたか(入れる先が無ければ false)
      */
-    static void apply(EditBox field, String text) {
+    static boolean apply(EditBox field, String text) {
         if (field != null && field.isVisible()) {
             field.setValue(text);
             field.moveCursorToEnd(false);
-        } else if (ModList.get().isLoaded("emi")) {
-            EmiBridge.setSearchText(text);
+            return true;
         }
+        if (ModList.get().isLoaded("emi")) {
+            EmiBridge.setSearchText(text);
+            return true;
+        }
+        return false;
     }
 }

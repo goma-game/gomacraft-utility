@@ -44,8 +44,13 @@ public final class EnglishNames {
     public static void install(FeatureContext context, String feature) {
         DEPENDENTS.add(feature);
         if (INSTALLED.compareAndSet(false, true)) {
-            context.modBus().addListener(RegisterClientReloadListenersEvent.class,
-                    event -> event.registerReloadListener(new Listener()));
+            context.modBus().addListener(RegisterClientReloadListenersEvent.class, event -> {
+                try {
+                    event.registerReloadListener(new Listener());
+                } catch (Throwable t) {
+                    Listener.fail(t);
+                }
+            });
         }
     }
 

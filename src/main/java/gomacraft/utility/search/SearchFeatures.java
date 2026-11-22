@@ -36,9 +36,9 @@ public final class SearchFeatures {
                 feature(AE2_ENGLISH_SEARCH, List.of(Requirement.of("ae2", AE2_RANGE)),
                         context -> gomacraft.utility.search.client.EnglishNames.install(context, AE2_ENGLISH_SEARCH)),
                 feature(AE2_SEARCH_KEY, List.of(Requirement.of("ae2", AE2_RANGE)),
-                        gomacraft.utility.search.client.Ae2SearchKey::init),
+                        context -> gomacraft.utility.search.client.Ae2SearchKey.init(context)),
                 feature(AE2_SEARCH_HISTORY, List.of(Requirement.of("ae2", AE2_RANGE)),
-                        gomacraft.utility.search.client.Ae2SearchHistory::init),
+                        context -> gomacraft.utility.search.client.Ae2SearchHistory.init(context)),
                 // コンパスと mcjtylib の版は Maven の形でないので、範囲を書かない(当て先が変われば FAILED で気付く)
                 feature(NATURESCOMPASS_SEARCH, List.of(Requirement.of("naturescompass")),
                         context -> gomacraft.utility.search.client.EnglishNames.install(context, NATURESCOMPASS_SEARCH)),

@@ -34,7 +34,8 @@ public final class Ae2SearchKey {
     }
 
     public static void init(FeatureContext context) {
-        context.modBus().addListener(RegisterKeyMappingsEvent.class, event -> event.register(KEY));
+        context.modBus().addListener(RegisterKeyMappingsEvent.class,
+                event -> Features.guard(SearchFeatures.AE2_SEARCH_KEY, () -> event.register(KEY)));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.KeyPressed.Pre.class,
                 event -> Features.guard(SearchFeatures.AE2_SEARCH_KEY, () -> onKey(event)));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.CharacterTyped.Pre.class,
@@ -46,7 +47,9 @@ public final class Ae2SearchKey {
         if (!(event.getScreen() instanceof MEStorageScreen<?> screen)) {
             return;
         }
-        if (!KEY.isActiveAndMatches(InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
+        // ⚠ isActiveAndMatches は割り当ての修飾キー(既定は「なし」)まで見るので、Alt を押すと偽になる。
+        // キーそのものの一致だけを見て、Alt は下で分ける
+        if (KEY.isUnbound() || !KEY.getKey().equals(InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
             return;
         }
         if (typing(screen)) {
@@ -57,7 +60,10 @@ public final class Ae2SearchKey {
         if (text == null || text.isEmpty()) {
             return;
         }
-        Ae2Search.apply(((MEStorageScreenKeyAccessor) screen).gomacraftUtility$keySearchField(), text);
+        // 入れる先が無い(検索欄が隠れていて EMI も無い)なら、キーを止めず、履歴にも記さない
+        if (!Ae2Search.apply(((MEStorageScreenKeyAccessor) screen).gomacraftUtility$keySearchField(), text)) {
+            return;
+        }
         Ae2SearchHistory.recordFromOtherFeature(text);
         swallowCharFor = screen;
         event.setCanceled(true);

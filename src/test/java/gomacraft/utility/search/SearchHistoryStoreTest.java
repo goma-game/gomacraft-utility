@@ -2,6 +2,7 @@ package gomacraft.utility.search;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
@@ -57,8 +58,27 @@ class SearchHistoryStoreTest {
         store.save(file);
         assertEquals(List.of("a", "b"), texts(SearchHistoryStore.load(file), "p"));
 
-        Files.writeString(file, "{\"players\":{\"p\":[{\"text\":\"x\"},{\"nope\":1},\"bad\",{\"text\":\"x\"}],\"q\":3}}");
+        // 空・重なる語だけは捨てる
+        Files.writeString(file, "{\"players\":{\"p\":[{\"text\":\"x\"},{\"text\":\"  \"},{\"text\":\"x\"}]}}");
         assertEquals(List.of("x"), texts(SearchHistoryStore.load(file), "p"));
         assertEquals(List.of(), texts(SearchHistoryStore.load(dir.resolve("missing.json")), "p"));
+    }
+
+    @Test
+    void wrongShapeThrowsInsteadOfReadingAsEmpty(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve("history.json");
+        for (String bad : List.of(
+                "[]",
+                "{\"players\":[]}",
+                "{\"version\":1}",
+                "{\"players\":{\"p\":3}}",
+                "{\"players\":{\"p\":[\"bad\"]}}",
+                "{\"players\":{\"p\":[{\"nope\":1}]}}",
+                "{\"players\":{\"p\":[{\"text\":1}]}}",
+                "{\"players\":{\"p\":[{\"text\":\"x\",\"favorite\":\"yes\"}]}}",
+                "{not json")) {
+            Files.writeString(file, bad);
+            assertThrows(RuntimeException.class, () -> SearchHistoryStore.load(file), bad);
+        }
     }
 }

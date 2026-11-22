@@ -135,7 +135,10 @@ public final class SearchHistoryStore {
 
     // ---- ファイル ----
 
-    /** ファイルから読む。無ければ空。形の崩れた部分は捨てる(読めた部分は使う)。 */
+    /**
+     * ファイルから読む。無ければ空。⚠ 形が違えば(JSON として読めない・{@code players} が無い・形の違う行が在る)
+     * 例外を投げる: 黙って空として読むと、次の保存で人の履歴を上書きしてしまう。空・長すぎる・重なる語だけは捨てる。
+     */
     public static SearchHistoryStore load(Path file) throws IOException {
         SearchHistoryStore store = new SearchHistoryStore();
         if (!Files.exists(file)) {
@@ -149,25 +152,29 @@ public final class SearchHistoryStore {
         JsonElement root = JsonParser.parseString(json);
         if (!root.isJsonObject() || !root.getAsJsonObject().has("players")
                 || !root.getAsJsonObject().get("players").isJsonObject()) {
-            return;
+            throw new IllegalArgumentException("search history: players の欄が無いか形が違う");
         }
         for (Map.Entry<String, JsonElement> player : root.getAsJsonObject().getAsJsonObject("players").entrySet()) {
             if (!player.getValue().isJsonArray()) {
-                continue;
+                throw new IllegalArgumentException("search history: " + player.getKey() + " の値が配列でない");
             }
             List<Entry> favorites = new ArrayList<>();
             List<Entry> recent = new ArrayList<>();
             for (JsonElement e : player.getValue().getAsJsonArray()) {
                 if (!e.isJsonObject() || !e.getAsJsonObject().has("text")
-                        || !e.getAsJsonObject().get("text").isJsonPrimitive()) {
-                    continue;
+                        || !e.getAsJsonObject().get("text").isJsonPrimitive()
+                        || !e.getAsJsonObject().get("text").getAsJsonPrimitive().isString()) {
+                    throw new IllegalArgumentException("search history: 形の違う行: " + e);
+                }
+                JsonElement fav = e.getAsJsonObject().get("favorite");
+                if (fav != null && !(fav.isJsonPrimitive() && fav.getAsJsonPrimitive().isBoolean())) {
+                    throw new IllegalArgumentException("search history: favorite が真偽値でない: " + e);
                 }
                 String value = normalize(e.getAsJsonObject().get("text").getAsString());
                 if (value == null || indexOf(favorites, value) >= 0 || indexOf(recent, value) >= 0) {
                     continue;
                 }
-                JsonElement fav = e.getAsJsonObject().get("favorite");
-                boolean favorite = fav != null && fav.isJsonPrimitive() && fav.getAsBoolean();
+                boolean favorite = fav != null && fav.getAsBoolean();
                 if (favorite && favorites.size() < MAX_FAVORITES) {
                     favorites.add(new Entry(value, true));
                 } else if (recent.size() < MAX_RECENT) {
