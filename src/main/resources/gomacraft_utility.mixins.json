@@ -19,7 +19,9 @@
     "naturescompass_search.NaturesCompassScreenMixin",
     "explorerscompass_search.ExplorersCompassScreenMixin",
     "mcjtylib_text.AbstractLabelMixin",
-    "mcjtylib_text.WindowMixin"
+    "mcjtylib_text.WindowMixin",
+    "ttf_glyph_lock.TrueTypeGlyphProviderLockMixin",
+    "ttf_glyph_lock.NativeImageFontLockMixin"
   ],
   "server": []
 }

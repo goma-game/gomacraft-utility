@@ -44,6 +44,8 @@ public final class Features {
         features.addAll(SearchFeatures.all());
         // 段 2(EMI と AE2): goma-org/gomabase#2295
         features.addAll(EmiAeFeatures.all());
+        // 段 3(重さと見た目): goma-org/gomabase#2295。TTF のグリフの読み込みを FreeType の lock で並べる
+        features.add(new gomacraft.utility.features.ttf_glyph_lock.TtfGlyphLock());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);
