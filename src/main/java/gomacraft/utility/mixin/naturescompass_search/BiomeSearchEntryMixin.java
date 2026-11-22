@@ -4,6 +4,7 @@ import com.chaosthedude.naturescompass.gui.BiomeSearchEntry;
 import com.chaosthedude.naturescompass.util.BiomeUtils;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import gomacraft.utility.Features;
 import gomacraft.utility.search.SearchFeatures;
 import gomacraft.utility.search.client.CompassEnglish;
@@ -25,9 +26,12 @@ public abstract class BiomeSearchEntryMixin {
             at = @At(value = "INVOKE",
                     target = "Lcom/chaosthedude/naturescompass/util/BiomeUtils;getBiomeNameForDisplay(Lnet/minecraft/world/level/Level;Lnet/minecraft/world/level/biome/Biome;)Ljava/lang/String;"),
             require = 0)
-    private String gomacraftUtility$addEnglishToList(Level level, Biome biome, Operation<String> original) {
+    private String gomacraftUtility$addEnglishToList(Level level, Biome biome, Operation<String> original,
+            @Local(argsOnly = true, ordinal = 3) int rowWidth) {
+        // render(GuiGraphics, index, top, left, width, height, mouseX, mouseY, hovered, partialTick) の width
         String shown = original.call(level, biome);
         return Features.guard(SearchFeatures.NATURESCOMPASS_SEARCH,
-                () -> CompassEnglish.biomeDisplay(shown, BiomeUtils.getKeyForBiome(level, biome).orElse(null)), shown);
+                () -> CompassEnglish.biomeDisplay(shown, BiomeUtils.getKeyForBiome(level, biome).orElse(null),
+                        rowWidth), shown);
     }
 }

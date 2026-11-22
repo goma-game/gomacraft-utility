@@ -3,6 +3,7 @@ package gomacraft.utility.mixin.explorerscompass_search;
 import com.chaosthedude.explorerscompass.gui.StructureSearchEntry;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import gomacraft.utility.Features;
 import gomacraft.utility.search.SearchFeatures;
 import gomacraft.utility.search.client.CompassEnglish;
@@ -25,9 +26,11 @@ public abstract class StructureSearchEntryMixin {
                     target = "Lcom/chaosthedude/explorerscompass/util/StructureUtils;getPrettyStructureName(Lnet/minecraft/resources/ResourceLocation;)Ljava/lang/String;",
                     ordinal = 0),
             require = 0)
-    private String gomacraftUtility$addEnglishToList(ResourceLocation key, Operation<String> original) {
+    private String gomacraftUtility$addEnglishToList(ResourceLocation key, Operation<String> original,
+            @Local(argsOnly = true, ordinal = 3) int rowWidth) {
+        // render(GuiGraphics, index, top, left, width, height, mouseX, mouseY, hovered, partialTick) の width
         String shown = original.call(key);
         return Features.guard(SearchFeatures.EXPLORERSCOMPASS_SEARCH,
-                () -> CompassEnglish.structureDisplay(shown, key), shown);
+                () -> CompassEnglish.structureDisplay(shown, key, rowWidth), shown);
     }
 }
