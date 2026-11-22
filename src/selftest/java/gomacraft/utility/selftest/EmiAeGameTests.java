@@ -35,7 +35,8 @@ public final class EmiAeGameTests {
 
     @GameTest(template = "empty")
     public static void screenFeaturesAreOffOnTheServer(GameTestHelper helper) {
-        for (String id : List.of(EmiAeFeatures.STOCK, EmiAeFeatures.CRAFT_CONFIRM, EmiAeFeatures.QUICK_CRAFT)) {
+        for (String id : List.of(EmiAeFeatures.STOCK, EmiAeFeatures.CRAFT_CONFIRM, EmiAeFeatures.QUICK_CRAFT,
+                EmiAeFeatures.GRID_CRAFT)) {
             Optional<FeatureStatus> status = Features.registry().status(id);
             helper.assertTrue(status.isPresent() && status.get().state() == FeatureState.OFF
                     && "client only".equals(status.get().reason()), id + " は off(client only) のはず: " + status);

@@ -8,6 +8,7 @@ import appeng.helpers.InventoryAction;
 import appeng.menu.me.common.GridInventoryEntry;
 import appeng.menu.me.common.IClientRepo;
 import appeng.menu.me.common.MEStorageMenu;
+import appeng.menu.me.items.CraftingTermMenu;
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.emi.emi.api.EmiApi;
 import dev.emi.emi.api.stack.EmiStackInteraction;
@@ -111,6 +112,12 @@ public final class QuickCraft {
             int amount = Screen.hasShiftDown() ? stackSize(key) : unit(key);
             pending = new Pending(key, amount, System.currentTimeMillis() + PENDING_MS, null);
             menu.handleInteraction(entry.getSerial(), InventoryAction.AUTO_CRAFT);
+            return true;
+        }
+        // パターンは無いが、作業台のレシピで材料が揃うなら、クラフト端末の枠で作る(GridCraft)
+        if (!stored && menu instanceof CraftingTermMenu craftingMenu
+                && Features.guard(EmiAeFeatures.GRID_CRAFT, () -> GridCraft.tryStart(craftingMenu, hovered.getStack()),
+                        false)) {
             return true;
         }
         String message = stored

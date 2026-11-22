@@ -10,7 +10,7 @@ import org.junit.jupiter.api.Test;
 
 class EmiAeFeaturesTest {
     /** 画面だけの機能(EMI と AE2 が要る)。 */
-    private static final String CLIENT_IDS = "emi_ae_stock emi_ae_craft_confirm emi_ae_quick_craft";
+    private static final String CLIENT_IDS = "emi_ae_stock emi_ae_craft_confirm emi_ae_quick_craft emi_ae_grid_craft";
 
     private static String line(Map<String, String> mods, boolean dedicatedServer) {
         return FeatureRegistry.evaluate(EmiAeFeatures.all(), id -> Optional.ofNullable(mods.get(id)),
