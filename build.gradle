@@ -67,7 +67,28 @@ neoForge {
     }
 }
 
+// 対象の Mod(当てる先)。⚠ 配る jar には入れない(compileOnly と、自己検査の起動だけの runtime)。
+// 版は gomacraft のサーバが積む版に合わせる(gomabase の台帳 mods_neoforge.yml)。
+repositories {
+    // Mekanism の公式の maven
+    maven {
+        url = 'https://modmaven.dev/'
+        content { includeGroup 'mekanism' }
+    }
+    // CurseForge のファイルを maven の形で引く(gomabase の配布も同じ取得元を使う)
+    maven {
+        url = 'https://cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+}
+
 dependencies {
+    // mekagun_server: 型(SoundEventRegistryObject・IEnergyContainer)だけを使う
+    compileOnly "mekanism:Mekanism:${mekanism_version}"
+    selftestImplementation "mekanism:Mekanism:${mekanism_version}"
+    // MekaWeapons(CurseForge のプロジェクト 929829・ファイル ${mekaweapons_file})。自己検査で専用サーバの例外を再現・確かめる
+    selftestRuntimeOnly "curse.maven:mekanism-weapons-929829:${mekaweapons_file}"
+
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

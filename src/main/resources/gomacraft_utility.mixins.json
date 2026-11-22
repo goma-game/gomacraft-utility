@@ -10,5 +10,7 @@
     "selftest_missing_class.SelftestMissingClassMixin"
   ],
   "client": [],
-  "server": []
+  "server": [
+    "mekagun_server.ItemMekaGunMixin"
+  ]
 }

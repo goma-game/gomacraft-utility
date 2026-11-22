@@ -37,7 +37,8 @@ public final class Features {
     /** 機能の一覧。 */
     public static List<Feature> catalog(boolean selftest) {
         List<Feature> features = new ArrayList<>();
-        // 段 0 では機能の中身はまだ無い(枠だけ)。機能はここに足す。
+        // 機能はここに足す(1 行ずつ。並行の作業と重ならないよう、並びは足した順)
+        features.add(new gomacraft.utility.features.mekagun_server.MekaGunServerFix());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);
