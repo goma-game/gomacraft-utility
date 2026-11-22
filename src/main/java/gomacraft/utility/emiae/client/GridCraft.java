@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.crafting.Ingredient;
@@ -75,7 +76,8 @@ public final class GridCraft {
                 continue;
             }
             ItemStack output = recipe.getOutputs().get(0).getItemStack();
-            if (!ItemStack.isSameItem(output, wanted.getItemStack())) {
+            // 成分(components)まで比べる(同じ item で成分の違う品 —— 色・中身・エンチャントなど —— のレシピを選ばない)
+            if (!ItemStack.isSameItemSameComponents(output, wanted.getItemStack())) {
                 continue;
             }
             RecipeHolder<?> holder = recipe.getBackingRecipe();
@@ -105,12 +107,19 @@ public final class GridCraft {
             return;
         }
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.player.containerMenu != p.menu() || System.currentTimeMillis() > p.deadline()) {
+        if (mc.player == null || mc.player.containerMenu != p.menu()) {
             pending = null;
             return;
         }
+        if (System.currentTimeMillis() > p.deadline()) {
+            pending = null;
+            // 黙って止まらない: 枠は詰めたが出来上がりが出なかった(材料は枠に残る)
+            mc.player.displayClientMessage(
+                    Component.translatable("gomacraft_utility.ae_grid_craft.timeout", p.output().getHoverName()), true);
+            return;
+        }
         for (Slot slot : p.menu().slots) {
-            if (slot instanceof CraftingTermSlot && ItemStack.isSameItem(slot.getItem(), p.output())) {
+            if (slot instanceof CraftingTermSlot && ItemStack.isSameItemSameComponents(slot.getItem(), p.output())) {
                 pending = null;
                 PacketDistributor.sendToServer(new InventoryActionPacket(p.action(), slot.index, 0));
                 return;
