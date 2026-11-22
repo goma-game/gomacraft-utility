@@ -1,6 +1,7 @@
 package gomacraft.utility.screenshot.net;
 
 import gomacraft.utility.Features;
+import gomacraft.utility.feature.FeatureRegistry;
 import gomacraft.utility.screenshot.ScreenshotFeatures;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.neoforged.bus.api.IEventBus;
@@ -14,10 +15,21 @@ public final class ScreenshotNet {
     private ScreenshotNet() {
     }
 
-    /** 1 回だけ登録する(2 つの機能のどちらから呼ばれても重ならない)。 */
-    public static void register(IEventBus modBus) {
+    /**
+     * 1 回だけ登録する(2 つの機能のどちらから呼ばれても重ならない)。
+     *
+     * @param feature 登録を頼んだ機能(登録が例外を投げたら、この機能だけを FAILED にする)
+     */
+    public static void register(IEventBus modBus, String feature) {
         if (REGISTERED.compareAndSet(false, true)) {
-            modBus.addListener(RegisterPayloadHandlersEvent.class, ScreenshotNet::onRegister);
+            modBus.addListener(RegisterPayloadHandlersEvent.class, event -> {
+                // ⚠ mod bus の listener の例外は Mod の読み込みごと止める。機能の FAILED に落とす
+                try {
+                    onRegister(event);
+                } catch (Throwable t) {
+                    Features.registry().markFailed(feature, FeatureRegistry.describe(t));
+                }
+            });
         }
     }
 

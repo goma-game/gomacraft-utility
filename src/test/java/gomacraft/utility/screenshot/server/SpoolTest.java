@@ -28,13 +28,13 @@ class SpoolTest {
         Path dir = Spool.dir(game);
         byte[] image = InboxStateTest.png(100);
         UUID id = UUID.fromString("0123abcd-0000-0000-0000-000000000000");
-        String stem = Spool.write(dir, image, ScreenshotRules.Format.PNG, "goma_dev", id,
+        String stem = Spool.write(dir, image, ScreenshotRules.Format.PNG, "player_one", id,
                 Instant.parse("2026-11-22T01:02:03Z"), 1);
         assertEquals("20261122T010203Z-0123abcd-00000001", stem);
         assertArrayEquals(image, Files.readAllBytes(dir.resolve(stem + ".png")));
         JsonObject meta = JsonParser.parseString(
                 Files.readString(dir.resolve(stem + ".json"), StandardCharsets.UTF_8)).getAsJsonObject();
-        assertEquals("goma_dev", meta.get("player").getAsString());
+        assertEquals("player_one", meta.get("player").getAsString());
         assertEquals(id.toString(), meta.get("uuid").getAsString());
         assertEquals("png", meta.get("format").getAsString());
         assertEquals("2026-11-22T01:02:03Z", meta.get("taken_at").getAsString());

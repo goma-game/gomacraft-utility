@@ -41,7 +41,7 @@ public final class ScreenshotFeatures {
         @Override
         public void init(FeatureContext context) {
             if (context.dist().isClient()) {
-                ScreenshotNet.register(context.modBus());
+                ScreenshotNet.register(context.modBus(), id());
                 ShareClient.init();
             }
         }
@@ -62,7 +62,7 @@ public final class ScreenshotFeatures {
         public void init(FeatureContext context) {
             // 口を開くのは専用サーバだけ(シングルの裏のサーバでは受けない —— 画面の側もボタンを出さない)
             if (context.dist().isDedicatedServer()) {
-                ScreenshotNet.register(context.modBus());
+                ScreenshotNet.register(context.modBus(), id());
                 ServerInbox.init();
             }
         }
