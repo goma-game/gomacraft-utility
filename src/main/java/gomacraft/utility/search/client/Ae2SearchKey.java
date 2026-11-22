@@ -26,8 +26,8 @@ import org.lwjgl.glfw.GLFW;
  *   <li>マウスの下の品の名前をキー(既定は F)で検索欄へ送る。Alt を押しながらなら {@code @<Mod の名前空間>}。
  *       送り先は、端末の品の欄の品なら <b>EMI の</b>検索欄(端末で見つけた品のレシピを EMI で引くため。EMI が無ければ
  *       AE2 の検索欄)、それ以外(持ち物・EMI の一覧)なら AE2 の検索欄。</li>
- *   <li>EMI の検索欄の語を、キー(既定は {@code ;}。ATM10 の既定の割り当てで、修飾キーなしでどの Mod も使っていない
- *       キー —— G は GuideME の案内の画面とぶつかった)で AE2 の検索欄へ写す(AE2 と EMI の検索を同期していないときに使う)。</li>
+ *   <li>F を <b>EMI の検索欄の上</b>で押したら、EMI の検索語を AE2 の検索欄へ写す(AE2 と EMI の検索を同期していないときに
+ *       使う —— ユーザの指定、goma-org/gomabase#2295)。同じことをする専用のキーもある(既定は割り当てなし)。</li>
  * </ul>
  *
  * <p>文字を打っている最中(AE2 の検索欄・ほかの入力欄・EMI の検索欄に focus がある)は何もしない。
@@ -36,9 +36,9 @@ import org.lwjgl.glfw.GLFW;
 public final class Ae2SearchKey {
     public static final KeyMapping KEY = new KeyMapping("key.gomacraft_utility.ae2_fill_search",
             KeyConflictContext.GUI, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F, "key.categories.gomacraft_utility");
+    /** 既定は割り当てなし(F を EMI の検索欄の上で押せば写せる。別のキーで写したい人が割り当てる)。 */
     public static final KeyMapping COPY_EMI = new KeyMapping("key.gomacraft_utility.ae2_copy_emi_search",
-            KeyConflictContext.GUI, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_SEMICOLON,
-            "key.categories.gomacraft_utility");
+            KeyConflictContext.GUI, InputConstants.UNKNOWN, "key.categories.gomacraft_utility");
 
     private static Screen swallowCharFor;
     private static KeyMapping swallowKey;
@@ -83,6 +83,14 @@ public final class Ae2SearchKey {
             return;
         }
         EditBox field = ((MEStorageScreenKeyAccessor) screen).gomacraftUtility$keySearchField();
+        if (fill && emi()) {
+            // F を EMI の検索欄の上で押したら、EMI の検索語を AE2 の検索欄へ写す(ユーザの指定 —— #2295)
+            double[] mouse = mouse();
+            if (EmiBridge.isMouseOverSearch(mouse[0], mouse[1])) {
+                fill = false;
+                copy = true;
+            }
+        }
         String text;
         boolean sent;
         if (fill) {
@@ -115,7 +123,8 @@ public final class Ae2SearchKey {
         }
         Ae2SearchHistory.recordFromOtherFeature(text);
         swallowCharFor = screen;
-        swallowKey = fill ? KEY : COPY_EMI;
+        // 捨てる文字は、押したキーの文字(EMI の検索欄の上の F で写したときも F)
+        swallowKey = pressed(KEY, event) ? KEY : COPY_EMI;
         event.setCanceled(true);
     }
 
