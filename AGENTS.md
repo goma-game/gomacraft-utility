@@ -45,6 +45,7 @@
     - `require` の不足は Mixin が Error を投げて起動ごと止まり、この Mod では拾えない。group の不足は、その機能だけの FAILED に落とせる。
     - group は中の成功を合計で数えるので、2 つの injector で共有すると、片方が当て損ねても `on` のままになる。
     - L1 の `MixinContractTest` が、書き忘れと group の名前の重なりを落とす。mixin と MixinExtras の注釈は、`@At`・`@Slice`・`@Group` などの決まった部品を除いて、全部 injector として見る(知らない注釈を素通りさせない)。
+  - 機能の中の細かい設定(件数など)は `Feature#settings` に `Setting` で並べる(設定のファイルの `[settings]` に既定の値が書かれ、`Setting#readInt(Features.config())` で読む。名前は `<機能>_<設定>`)。書いていない・読めない値は既定の値に戻る(`[features]` の入り切りと違い、機能は切らない)。
   - mixin の中身と event の listener は `Features.guard("<機能>", () -> …)` で包む。有効でない機能は走らず、例外を投げた機能は FAILED になって、以後はその機能のどの部分も走らない(FAILED の機能の、当たってしまった残りの mixin を止める)。
     - ⚠ 元の処理を包む mixin(`@WrapMethod`・`@WrapOperation` の `original.call`)は、`original.call` を guard の中に入れない(guard が例外を飲み、元の処理の例外まで隠す)。`Features.registry().isOn("<機能>")` が偽なら足した処理をせずに `original.call` だけを呼ぶ形で分ける(例: `ttf_glyph_lock`)。
   - 当て先のクラスは、起動時の 1 行の前に読み込ませる(`GomacraftMixinPlugin.preloadTargets`。初期化はしない)。クラスを読み込んだだけで副作用のあるものに当てるなら、先にここで困らないかを確かめる。
