@@ -10,7 +10,7 @@ import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
@@ -40,9 +40,9 @@ public final class MekaGunServerGameTests {
         helper.assertTrue(energy != null, "Meka-Gun のエネルギーの入れ物が無い");
         energy.setEnergy(energy.getMaxEnergy());
 
-        ServerPlayer player = helper.makeMockServerPlayerInLevel();
-        // サバイバルで撃つ(クリエイティブはエネルギーを使わないので、撃ったかを確かめられない)
-        player.setGameMode(GameType.SURVIVAL);
+        // サバイバルの仮のプレイヤー(⚠ 接続を持つ仮の ServerPlayer にしない —— Curios などが同期の通信を送ろうとして
+        // 落ちる。releaseUsing の ServerPlayer の枝の直しが当たったことは、@Group(min = 1) が起動時に見る)
+        Player player = helper.makeMockPlayer(GameType.SURVIVAL);
         player.setItemInHand(InteractionHand.MAIN_HAND, gun);
         player.startUsingItem(InteractionHand.MAIN_HAND);
         // ⚠ 撃つ間隔(最後に撃った時刻からの tick)を満たすよう、時刻が進んでから撃つ

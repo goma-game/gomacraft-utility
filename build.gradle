@@ -67,27 +67,76 @@ neoForge {
     }
 }
 
-// 対象の Mod(当てる先)。⚠ 配る jar には入れない(compileOnly と、自己検査の起動だけの runtime)。
-// 版は gomacraft のサーバが積む版に合わせる(gomabase の台帳 mods_neoforge.yml)。
+// 当てる先の Mod(組み立てにだけ使う。配る jar には入れず、動かす側に在るときだけ機能が有効になる)
 repositories {
-    // Mekanism の公式の maven
-    maven {
-        url = 'https://modmaven.dev/'
-        content { includeGroup 'mekanism' }
+    // AE2 は Maven Central(org.appliedenergistics)
+    mavenCentral()
+    exclusiveContent {
+        forRepository { maven { url = 'https://maven.terraformersmc.com/' } }
+        filter { includeGroup 'dev.emi' }
     }
-    // CurseForge のファイルを maven の形で引く(gomabase の配布も同じ取得元を使う)
-    maven {
-        url = 'https://cursemaven.com'
-        content { includeGroup 'curse.maven' }
+    exclusiveContent {
+        forRepository { maven { url = 'https://maven.theillusivec4.top/' } }
+        filter { includeGroup 'top.theillusivec4.curios' }
+    }
+    // 段 1(検索まわり): コンパスと mcjtylib は公式の maven にその版が無いので Modrinth の maven から取る
+    // (sha1 は Modrinth の API とパックの jar で同じことを確かめた)
+    exclusiveContent {
+        forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
+        filter { includeGroup 'maven.modrinth' }
+    }
+}
+
+// 手元と自己検査で動かすときだけ積む Mod(配る jar と、その依存の宣言には入らない)
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+    selftestRuntimeClasspath.extendsFrom localRuntime
+}
+
+// 段 3(動作まわり): Mekanism は公式の maven、MekaWeapons は CurseForge のファイルを maven の形で引く
+// (gomabase の配布も同じ取得元 cursemaven を使う)
+repositories {
+    exclusiveContent {
+        forRepository { maven { url = 'https://modmaven.dev/' } }
+        filter { includeGroup 'mekanism' }
+    }
+    exclusiveContent {
+        forRepository { maven { url = 'https://cursemaven.com' } }
+        filter { includeGroup 'curse.maven' }
     }
 }
 
 dependencies {
-    // mekagun_server: 型(SoundEventRegistryObject・IEnergyContainer)だけを使う
+    // 段 2(EMI と AE2): 版は gradle.properties
+    compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    compileOnly "dev.emi:emi-neoforge:${emi_version}"
+    // Curios の枠のワイヤレスの端末を拾う(Curios が在るときだけ呼ぶ)
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    selftestCompileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    localRuntime "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    localRuntime "org.appliedenergistics:guideme:${guideme_version}"
+    localRuntime "dev.emi:emi-neoforge:${emi_version}"
+    // 自己検査で Curios の枠を読む道(CuriosStacks)も通す
+    localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+    // 段 1(検索まわり): 版は gradle.properties
+    compileOnly "maven.modrinth:natures-compass:${natures_compass_version}"
+    compileOnly "maven.modrinth:explorers-compass:${explorers_compass_version}"
+    compileOnly "maven.modrinth:mcjtylib:${mcjtylib_version}"
+    // 当て先の試験(MixinTargetsTest)が、当て先のクラスとメソッドが組み立ての版に在ることを ASM で読む
+    testRuntimeOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    testRuntimeOnly "dev.emi:emi-neoforge:${emi_version}"
+    testRuntimeOnly "maven.modrinth:natures-compass:${natures_compass_version}"
+    testRuntimeOnly "maven.modrinth:explorers-compass:${explorers_compass_version}"
+    testRuntimeOnly "maven.modrinth:mcjtylib:${mcjtylib_version}"
+    // 段 3(動作まわり)mekagun_server: 型(SoundEventRegistryObject・IEnergyContainer)だけを使う。
+    // MekaWeapons は CurseForge のプロジェクト 929829。自己検査で専用サーバの例外を再現・確かめる
     compileOnly "mekanism:Mekanism:${mekanism_version}"
-    selftestImplementation "mekanism:Mekanism:${mekanism_version}"
-    // MekaWeapons(CurseForge のプロジェクト 929829・ファイル ${mekaweapons_file})。自己検査で専用サーバの例外を再現・確かめる
-    selftestRuntimeOnly "curse.maven:mekanism-weapons-929829:${mekaweapons_file}"
+    selftestCompileOnly "mekanism:Mekanism:${mekanism_version}"
+    localRuntime "mekanism:Mekanism:${mekanism_version}"
+    localRuntime "curse.maven:mekanism-weapons-929829:${mekaweapons_file}"
+    testRuntimeOnly "mekanism:Mekanism:${mekanism_version}"
+    testRuntimeOnly "curse.maven:mekanism-weapons-929829:${mekaweapons_file}"
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'

@@ -1,0 +1,9 @@
+{
+  "key.categories.gomacraft_utility": "gomacraft utility",
+  "key.gomacraft_utility.ae_quick_craft": "AE: EMI の品を取り出す・作る",
+  "gomacraft_utility.ae_quick_craft.unavailable": "%s はネットワークに無く、パターンもありません",
+  "gomacraft_utility.ae_quick_craft.not_an_item": "%s は手持ちへ移せず、パターンもありません",
+  "gomacraft_utility.ae_grid_craft.timeout": "枠に材料を詰めましたが、%s ができませんでした(材料は枠に残っています)",
+  "key.gomacraft_utility.ae2_fill_search": "マウスの下の品をAE2端末の検索欄へ送る",
+  "gomacraft_utility.search_history.hint": "左: 検索 / 右: 削除 / Shift+左・中: お気に入り"
+}

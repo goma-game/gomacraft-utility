@@ -1,12 +1,15 @@
 package gomacraft.utility;
 
+import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.feature.Feature;
 import gomacraft.utility.feature.FeatureConfig;
 import gomacraft.utility.feature.FeatureRegistry;
 import java.util.ArrayList;
 import java.util.List;
+import gomacraft.utility.search.SearchFeatures;
 import java.util.Set;
 import java.util.function.Supplier;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +40,11 @@ public final class Features {
     /** 機能の一覧。 */
     public static List<Feature> catalog(boolean selftest) {
         List<Feature> features = new ArrayList<>();
-        // 機能はここに足す(1 行ずつ。並行の作業と重ならないよう、並びは足した順)
+        // 段 1(検索まわり): goma-org/gomabase#2295。どれも画面の機能(clientOnly)で、専用サーバでは off
+        features.addAll(SearchFeatures.all());
+        // 段 2(EMI と AE2): goma-org/gomabase#2295
+        features.addAll(EmiAeFeatures.all());
+        // 段 3(動作まわり): goma-org/gomabase#2295。専用サーバでだけ当てる直し
         features.add(new gomacraft.utility.features.mekagun_server.MekaGunServerFix());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
@@ -78,6 +85,7 @@ public final class Features {
             LOGGER.warn("gomacraft_utility: 設定を読めないので全部の機能を切る: {}", FeatureRegistry.describe(e));
             config = FeatureConfig.unreadable();
         }
-        return FeatureRegistry.evaluate(features, FmlModLookup.INSTANCE, config, LOGGER::info);
+        return FeatureRegistry.evaluate(
+                features, FmlModLookup.INSTANCE, config, LOGGER::info, FMLEnvironment.dist.isDedicatedServer());
     }
 }
