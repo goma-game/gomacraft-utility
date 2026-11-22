@@ -21,6 +21,11 @@ public final class EmiAeFeatures {
     public static final String CRAFT_CONFIRM = "emi_ae_craft_confirm";
     /** EMI の一覧の品を、1 回の操作で手持ちへ(在れば取り出し、無ければ AE2 の自動クラフトを始める)。 */
     public static final String QUICK_CRAFT = "emi_ae_quick_craft";
+    /**
+     * {@link #QUICK_CRAFT} の続き: パターンは無いが、ネットワークの材料で作業台のレシピから作れる品を、クラフト端末の枠で
+     * 作って手元へ(ユーザ決定 goma-org/gomabase#2295 の 2)。AE2 の連携の部品(レシピ移し)を使うので、別に切れるようにする。
+     */
+    public static final String GRID_CRAFT = "emi_ae_grid_craft";
 
     /**
      * 端末を閉じているときの在庫数の問い合わせ(サーバが答え、画面が問う)。サーバは AE2 だけが要る。
@@ -43,6 +48,7 @@ public final class EmiAeFeatures {
                 feature(STOCK, AE2_AND_EMI, true, bus -> { }),
                 feature(CRAFT_CONFIRM, AE2_AND_EMI, true, bus -> { }),
                 feature(QUICK_CRAFT, AE2_AND_EMI, true, bus -> gomacraft.utility.emiae.client.QuickCraft.init(bus)),
+                feature(GRID_CRAFT, AE2_AND_EMI, true, bus -> gomacraft.utility.emiae.client.GridCraft.init(bus)),
                 // サーバと画面の両方: 通信の口(サーバは答え、画面は問う。どちらも optional)
                 feature(STOCK_QUERY, AE2, false, bus -> gomacraft.utility.emiae.net.ServerStock.init(bus)));
     }
