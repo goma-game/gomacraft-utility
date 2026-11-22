@@ -47,6 +47,8 @@ public final class Features {
         features.addAll(EmiAeFeatures.all());
         // 段 3(動作まわり): goma-org/gomabase#2295。専用サーバでだけ当てる直し
         features.add(new gomacraft.utility.features.mekagun_server.MekaGunServerFix());
+        // 段 3(重さと見た目): goma-org/gomabase#2295。TTF のグリフの読み込みを FreeType の lock で並べる
+        features.add(new gomacraft.utility.features.ttf_glyph_lock.TtfGlyphLock());
         // 段 4(スクショの Discord への投稿): goma-org/gomabase#2295
         features.addAll(ScreenshotFeatures.all());
         if (selftest) {

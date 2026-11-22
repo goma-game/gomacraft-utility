@@ -41,6 +41,7 @@ class MixinTargetsTest {
     private static final String SHADOW = "Lorg/spongepowered/asm/mixin/Shadow;";
     private static final String ACCESSOR = "Lorg/spongepowered/asm/mixin/gen/Accessor;";
     private static final String INVOKER = "Lorg/spongepowered/asm/mixin/gen/Invoker;";
+    private static final String WRAP_METHOD = "Lcom/llamalad7/mixinextras/injector/wrapmethod/WrapMethod;";
 
     @Test
     void everyTargetExistsInTheBuildVersions() throws Exception {
@@ -108,6 +109,8 @@ class MixinTargetsTest {
             for (Object o : list) {
                 ats.add((AnnotationNode) o);
             }
+        } else if (at == null && injector.desc.equals(WRAP_METHOD)) {
+            // MixinExtras の @WrapMethod はメソッドごと包むので @At を持たない(当て先のメソッドだけを見る)
         } else {
             fail(where + ": @At を読めない");
         }
