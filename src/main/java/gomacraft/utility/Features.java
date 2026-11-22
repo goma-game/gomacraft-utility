@@ -4,6 +4,7 @@ import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.feature.Feature;
 import gomacraft.utility.feature.FeatureConfig;
 import gomacraft.utility.feature.FeatureRegistry;
+import gomacraft.utility.screenshot.ScreenshotFeatures;
 import java.util.ArrayList;
 import java.util.List;
 import gomacraft.utility.search.SearchFeatures;
@@ -48,6 +49,8 @@ public final class Features {
         features.add(new gomacraft.utility.features.mekagun_server.MekaGunServerFix());
         // 段 3(重さと見た目): goma-org/gomabase#2295。TTF のグリフの読み込みを FreeType の lock で並べる
         features.add(new gomacraft.utility.features.ttf_glyph_lock.TtfGlyphLock());
+        // 段 4(スクショの Discord への投稿): goma-org/gomabase#2295
+        features.addAll(ScreenshotFeatures.all());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);
