@@ -83,6 +83,25 @@ public final class FeatureConfig {
         return parse(Files.readString(file, StandardCharsets.UTF_8));
     }
 
+    /**
+     * 設定の中身の {@code [features]} の値を書き換えた文字列(設定の画面が使う)。在る行は値だけを替え(コメントと
+     * 並びは残す)、無い名前は {@code [features]} の最後に足す。{@code [features]} が無ければ足す。
+     */
+    public static String update(String text, Map<String, Boolean> changes) {
+        Map<String, String> values = new LinkedHashMap<>();
+        changes.forEach((id, on) -> values.put(id, on.toString()));
+        return TomlLines.update(text, Map.of("features", values));
+    }
+
+    /** 設定のファイルの値を書き換える(無ければ既定の中身から作る)。効くのは次の起動から(mixin の当否は起動で決まる)。 */
+    public static void write(Path configDir, List<? extends Feature> features, Map<String, Boolean> changes)
+            throws IOException {
+        Path file = configDir.resolve(FILE_NAME);
+        String text = Files.exists(file) ? Files.readString(file, StandardCharsets.UTF_8) : defaults(features);
+        Files.createDirectories(configDir);
+        Files.writeString(file, update(text, changes), StandardCharsets.UTF_8);
+    }
+
     /** 既定の値の設定ファイルの中身。 */
     public static String defaults(List<? extends Feature> features) {
         StringBuilder sb = new StringBuilder();

@@ -92,6 +92,51 @@ class ClientSettingsTest {
     }
 
     @Test
+    void savingChangesOnlyTheValueLinesAndKeepsHandWrittenLines(@TempDir Path dir) throws Exception {
+        String before = """
+                # 自分のメモ
+                [emi_ae_quick_craft]
+                skip_confirm = false  # 量はその場で決めたい
+                これは読めない行
+
+                [search_history]
+                size = 20
+                """;
+        Files.writeString(dir.resolve(ClientSettings.FILE_NAME), before);
+        ClientSettings s = settings();
+        s.load(dir, w -> { });
+        s.set(SKIP, true);
+        s.save();
+        String after = Files.readString(dir.resolve(ClientSettings.FILE_NAME));
+        assertTrue(after.startsWith("""
+                # 自分のメモ
+                [emi_ae_quick_craft]
+                skip_confirm = true  # 量はその場で決めたい
+                これは読めない行
+
+                [search_history]
+                size = 20
+                """), after);
+        // 書かれていなかった項目は、無い節ごと足す
+        assertTrue(after.contains("[screenshot_share]\ndefault_target = \"chat\""), after);
+    }
+
+    @Test
+    void anUnreadableFileIsNotOverwritten(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve(ClientSettings.FILE_NAME);
+        byte[] notUtf8 = {(byte) 0xff, (byte) 0xfe, 'x', '\n'};
+        Files.write(file, notUtf8);
+        ClientSettings s = settings();
+        List<String> warnings = new ArrayList<>();
+        s.load(dir, warnings::add);
+        assertEquals(false, s.get(SKIP), "読めなければ既定の値で動く");
+        s.set(SKIP, true);
+        org.junit.jupiter.api.Assertions.assertThrows(java.io.IOException.class, s::save);
+        org.junit.jupiter.api.Assertions.assertArrayEquals(notUtf8, Files.readAllBytes(file), "読めないファイルを書き換えた");
+        assertTrue(!warnings.isEmpty());
+    }
+
+    @Test
     void createsTheFileWithDefaults(@TempDir Path dir) throws Exception {
         ClientSettings s = settings();
         s.load(dir, w -> { });

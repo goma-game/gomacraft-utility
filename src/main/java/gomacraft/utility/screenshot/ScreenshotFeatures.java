@@ -58,6 +58,12 @@ public final class ScreenshotFeatures {
             return false;
         }
 
+        /** 受け口はサーバの宣言(gomabase)が決める。手元の設定の画面には出さない。 */
+        @Override
+        public boolean shownInClientSettings() {
+            return false;
+        }
+
         @Override
         public void init(FeatureContext context) {
             // 口を開くのは専用サーバだけ(シングルの裏のサーバでは受けない —— 画面の側もボタンを出さない)
