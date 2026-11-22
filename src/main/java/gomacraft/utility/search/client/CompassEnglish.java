@@ -23,13 +23,28 @@ public final class CompassEnglish {
         return withEnglish(shown, key == null ? null : Util.makeDescriptionId("structure", key));
     }
 
+    /** 一覧に出すバイオームの名前を「日本語 / English」の 1 行にする(品と同じ併記 —— goma-org/gomabase#2295 の 8)。 */
+    public static String biomeDisplay(String shown, ResourceLocation key) {
+        return joined(shown, key == null ? null : Util.makeDescriptionId("biome", key), " / ");
+    }
+
+    /** 一覧に出す構造物の名前を「日本語 / English」の 1 行にする。 */
+    public static String structureDisplay(String shown, ResourceLocation key) {
+        return joined(shown, key == null ? null : Util.makeDescriptionId("structure", key), " / ");
+    }
+
     static String withEnglish(String shown, String translationKey) {
+        return joined(shown, translationKey, "\n");
+    }
+
+    /** 英語名が引けて、見えている名前と違うときだけ {@code separator} でつなぐ(英語で遊んでいるときは足さない)。 */
+    static String joined(String shown, String translationKey, String separator) {
         if (shown == null || translationKey == null) {
             return shown;
         }
         return EnglishNames.lookup(translationKey)
                 .filter(english -> !english.toLowerCase(Locale.ROOT).equals(shown.toLowerCase(Locale.ROOT)))
-                .map(english -> shown + "\n" + english)
+                .map(english -> shown + separator + english)
                 .orElse(shown);
     }
 }
