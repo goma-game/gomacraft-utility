@@ -4,7 +4,7 @@ import appeng.api.stacks.AEKey;
 import gomacraft.utility.GomacraftUtility;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import io.netty.handler.codec.DecoderException;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -24,10 +24,21 @@ public final class StockPayloads {
     private StockPayloads() {
     }
 
-    /** 知らない種類の鍵(AE2 のアドオンの違い)は null で読まれるので、捨てる。 */
-    private static final StreamCodec<RegistryFriendlyByteBuf, List<AEKey>> KEYS =
-            AEKey.STREAM_CODEC.apply(ByteBufCodecs.list(MAX_KEYS)).map(
-                    list -> list.stream().filter(Objects::nonNull).toList(), list -> list);
+    /**
+     * 品の鍵。⚠ AE2 の {@code readKey} は知らない種類の鍵(相手と AE2 のアドオンが違う)を null で返し、その鍵の残りを
+     * 読まないので、後ろの読みがずれる。null を読んだら payload ごと拒む(ずれた中身を数として使わない)。
+     */
+    private static final StreamCodec<RegistryFriendlyByteBuf, AEKey> KEY = StreamCodec.of(
+            AEKey.STREAM_CODEC::encode,
+            buf -> {
+                AEKey key = AEKey.STREAM_CODEC.decode(buf);
+                if (key == null) {
+                    throw new DecoderException("gomacraft_utility: 知らない種類の AE の鍵(相手と AE2 のアドオンが違う)");
+                }
+                return key;
+            });
+
+    private static final StreamCodec<RegistryFriendlyByteBuf, List<AEKey>> KEYS = KEY.apply(ByteBufCodecs.list(MAX_KEYS));
 
     /** 画面 → サーバ: この品の在庫数とクラフト可を知りたい。 */
     public record Query(List<AEKey> keys) implements CustomPacketPayload {
@@ -45,7 +56,7 @@ public final class StockPayloads {
     /** 1 品の答え。 */
     public record Entry(AEKey key, long stored, boolean craftable) {
         static final StreamCodec<RegistryFriendlyByteBuf, Entry> CODEC = StreamCodec.composite(
-                AEKey.STREAM_CODEC, Entry::key,
+                KEY, Entry::key,
                 ByteBufCodecs.VAR_LONG, Entry::stored,
                 ByteBufCodecs.BOOL, Entry::craftable,
                 Entry::new);

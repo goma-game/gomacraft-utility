@@ -4,12 +4,14 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class RemoteStockCacheTest {
+    /** 寿命 3 秒・間隔 1 秒・届かないときの間 10 秒・返事の期限 2.5 秒・1 回 2 品。 */
     private static RemoteStockCache<String> cache() {
-        return new RemoteStockCache<>(3000, 1000, 10000, 2);
+        return new RemoteStockCache<>(3000, 1000, 10000, 2500, 2);
     }
 
     @Test
@@ -22,6 +24,52 @@ class RemoteStockCacheTest {
         assertEquals(List.of(), c.takeDue(999), "間隔の内は送らない");
         assertEquals(List.of("c"), c.takeDue(1000));
         assertEquals(List.of(), c.takeDue(5000), "見ていない品は問わない");
+    }
+
+    @Test
+    void doesNotAskAgainWhileWaitingForTheReply() {
+        RemoteStockCache<String> c = cache();
+        c.get("a", 0);
+        assertEquals(List.of("a"), c.takeDue(0));
+        // 返事の前に描画が何度も同じ品を求めても、溜めない
+        c.get("a", 100);
+        c.get("a", 1100);
+        assertEquals(List.of(), c.takeDue(1100), "返事を待っている品をもう一度送った");
+        c.put("a", new StockIndex.Stock(5, false), 1200);
+        assertEquals(5, c.get("a", 1300).stored());
+    }
+
+    @Test
+    void aDroppedQueryIsAskedAgainAfterTheReplyTimeout() {
+        RemoteStockCache<String> c = cache();
+        c.get("a", 0);
+        c.takeDue(0);
+        // サーバが黙って捨てた(返事が来ない)。期限の後は、また問う
+        c.get("a", 2499);
+        assertEquals(List.of(), c.takeDue(2499));
+        c.get("a", 2500);
+        assertEquals(List.of("a"), c.takeDue(2500));
+    }
+
+    @Test
+    void sendsEachKeyOncePerCycleOverTime() {
+        // 30 秒、毎フレーム(16 ミリ秒ごと)同じ品を見て、返事は送ってから 200 ミリ秒で来る
+        RemoteStockCache<String> c = new RemoteStockCache<>(5000, 2000, 10000, 5000, 256);
+        List<Long> sentAt = new ArrayList<>();
+        long replyAt = -1;
+        for (long now = 0; now <= 30000; now += 16) {
+            c.get("a", now);
+            if (!c.takeDue(now).isEmpty()) {
+                sentAt.add(now);
+                replyAt = now + 200;
+            }
+            if (replyAt >= 0 && now >= replyAt) {
+                c.put("a", new StockIndex.Stock(1, false), now);
+                replyAt = -1;
+            }
+        }
+        // 寿命 5 秒ごとに 1 回(0, 5.2, 10.4 … 秒あたり)で、30 秒で 6 回
+        assertEquals(6, sentAt.size(), "送った時刻: " + sentAt);
     }
 
     @Test

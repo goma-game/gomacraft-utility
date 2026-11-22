@@ -18,7 +18,7 @@ import net.neoforged.neoforge.network.PacketDistributor;
 public final class RemoteStock {
     static final RemoteStockCache<AEKey> CACHE = new RemoteStockCache<>(
             /* 答えの寿命 */ 5000, /* 送る間隔(サーバの下限 1 秒より長く) */ 2000, /* 届かないときの間 */ 10000,
-            StockPayloads.MAX_KEYS);
+            /* 返事を待つ期限(捨てられた問いを宙に浮かせない) */ 5000, StockPayloads.MAX_KEYS);
     private static ClientPacketListener connection;
 
     private RemoteStock() {
