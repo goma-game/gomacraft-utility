@@ -4,6 +4,8 @@ build/
 run/
 runs/
 run-data/
+run-selftest/
+repo/
 out/
 logs/
 

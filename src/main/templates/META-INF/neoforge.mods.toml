@@ -1,0 +1,35 @@
+# gomacraft_utility の Mod の宣言(build の generateModMetadata が gradle.properties の値で埋める)。
+#
+# この Mod の無いクライアントも接続できるようにする: 1.21.1 の FML には displayTest が無い(FML から外された)。
+# 代わりに、レジストリ・ブロック・アイテムを足さないことと、通信の payload を全部 optional にすることで満たす。
+
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+issueTrackerURL="https://github.com/goma-game/gomacraft-utility/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+displayURL="https://github.com/goma-game/gomacraft-utility"
+description='''
+gomacraft(ATM10)のためのユーティリティ。便利さと不具合の直しだけを持ち、新しい要素は足さない。
+'''
+
+[[mixins]]
+config="${mod_id}.mixins.json"
+
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="${neo_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
