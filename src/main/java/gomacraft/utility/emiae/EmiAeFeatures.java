@@ -1,8 +1,11 @@
 package gomacraft.utility.emiae;
 
 import gomacraft.utility.feature.Feature;
+import gomacraft.utility.feature.FeatureContext;
 import gomacraft.utility.feature.Requirement;
 import java.util.List;
+import java.util.function.Consumer;
+import net.neoforged.bus.api.IEventBus;
 
 /**
  * 段 2(EMI と AE2)の機能(goma-org/gomabase#2295)。
@@ -16,6 +19,8 @@ public final class EmiAeFeatures {
     public static final String STOCK = "emi_ae_stock";
     /** AE2 のクラフト計画の画面(CraftConfirmScreen)でも EMI の一覧を出す。 */
     public static final String CRAFT_CONFIRM = "emi_ae_craft_confirm";
+    /** EMI の一覧の品を、1 回の操作で手持ちへ(在れば取り出し、無ければ AE2 の自動クラフトを始める)。 */
+    public static final String QUICK_CRAFT = "emi_ae_quick_craft";
 
     /** 当てる先の版。AE2 は 19.2 の系列、EMI は 1.1 の系列(内部の描画のクラスに当てるので、系列が変われば切る)。 */
     static final List<Requirement> AE2_AND_EMI =
@@ -25,11 +30,20 @@ public final class EmiAeFeatures {
     }
 
     public static List<Feature> all() {
-        return List.of(clientFeature(STOCK), clientFeature(CRAFT_CONFIRM));
+        // ⚠ init はラムダの中で呼ぶ(メソッド参照 QuickCraft::init にしない)。メソッド参照は一覧を作る時点で
+        // クラスを引くので、専用サーバでも画面のクラス(KeyMapping など)を読み込んでしまう
+        return List.of(clientFeature(STOCK, bus -> { }), clientFeature(CRAFT_CONFIRM, bus -> { }),
+                clientFeature(QUICK_CRAFT, bus -> gomacraft.utility.emiae.client.QuickCraft.init(bus)));
     }
 
-    private static Feature clientFeature(String id) {
+    /** @param init 有効なときに(= 画面の側で)、Mod の組み立ての中で 1 回呼ぶもの */
+    private static Feature clientFeature(String id, Consumer<IEventBus> init) {
         return new Feature() {
+            @Override
+            public void init(FeatureContext context) {
+                init.accept(context.modBus());
+            }
+
             @Override
             public String id() {
                 return id;

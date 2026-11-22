@@ -10,7 +10,8 @@
     "selftest_missing_class.SelftestMissingClassMixin"
   ],
   "client": [
-    "emi_ae_stock.EmiScreenSpaceMixin"
+    "emi_ae_stock.EmiScreenSpaceMixin",
+    "emi_ae_quick_craft.EmiScreenManagerMixin"
   ],
   "server": []
 }
