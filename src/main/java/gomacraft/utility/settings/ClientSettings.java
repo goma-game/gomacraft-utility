@@ -165,6 +165,12 @@ public final class ClientSettings {
                 section = sec.group(1);
                 continue;
             }
+            if (line.startsWith("[")) {
+                // 形に合わない節の見出し([Other.Mod] など): 続く行を前の節の値として読まない
+                section = "";
+                problems.add("読めない節の見出し: " + line);
+                continue;
+            }
             Matcher entry = ENTRY.matcher(line);
             if (entry.matches() && !section.isEmpty()) {
                 raw.computeIfAbsent(section, f -> new LinkedHashMap<>()).put(entry.group(1), entry.group(2));
