@@ -20,6 +20,8 @@
     "explorerscompass_search.ExplorersCompassScreenMixin",
     "mcjtylib_text.AbstractLabelMixin",
     "mcjtylib_text.WindowMixin",
+    "ae2_search_sync_toggle.MEStorageScreenSyncMixin",
+    "ae2_search_sync_toggle.MEStorageScreenSyncAccessor",
     "ae2_tooltip_search_cache.RepoSearchMixin",
     "ae2_tooltip_search_cache.MEStorageScreenRepoAccessor",
     "ttf_glyph_lock.TrueTypeGlyphProviderLockMixin",

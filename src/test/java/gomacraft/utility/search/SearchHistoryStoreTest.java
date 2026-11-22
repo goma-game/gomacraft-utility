@@ -65,6 +65,19 @@ class SearchHistoryStoreTest {
     }
 
     @Test
+    void matchingFiltersByInputAndLimitIsConfigurable() {
+        SearchHistoryStore store = new SearchHistoryStore(3);
+        for (String t : List.of("iron ingot", "Gold Ingot", "iron", "copper")) {
+            store.record("p", t);
+        }
+        assertEquals(List.of("copper", "iron", "Gold Ingot"), texts(store, "p"), "上限 3 件で古いものから消す");
+        assertEquals(List.of("Gold Ingot"), store.matching("p", "ingot").stream()
+                .map(SearchHistoryStore.Entry::text).toList(), "大文字小文字を区別しない");
+        assertEquals(List.of(), store.matching("p", "IRON"), "入力そのものは出さない");
+        assertEquals(3, store.matching("p", " ").size(), "空の入力なら全部");
+    }
+
+    @Test
     void wrongShapeThrowsInsteadOfReadingAsEmpty(@TempDir Path dir) throws Exception {
         Path file = dir.resolve("history.json");
         for (String bad : List.of(
