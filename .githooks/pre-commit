@@ -1,0 +1,12 @@
+#!/bin/sh
+# main への直接コミットを拒否する(ほかの作業リポジトリと同じ守り)。
+# トピックブランチを切り忘れたまま main で次の実装を始める失敗を、ほかのリポジトリで実際に踏んでいる。
+#
+# 意図的に必要な場合のみ --no-verify で迂回する。
+branch=$(git symbolic-ref --short HEAD 2>/dev/null)
+if [ "$branch" = "main" ]; then
+  echo "ERROR: main へ直接コミットしようとしている。トピックブランチを切ること。" >&2
+  echo "(意図的な場合のみ: git commit --no-verify)" >&2
+  exit 1
+fi
+exit 0

@@ -1,0 +1,33 @@
+# Gradle / ModDevGradle
+.gradle/
+build/
+run/
+runs/
+run-data/
+out/
+logs/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.project
+.classpath
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# 手元だけの値(秘密を jar にもリポジトリにも入れない)
+.env
+.env.*
+!.env.example
+
+# Windows 予約デバイス名(cmd 構文のリダイレクトミス等で生成される。
+# 誤ってトラッキングすると checkout 不能になる環境があるため明示的に無視)
+nul
+[Nn][Uu][Ll]

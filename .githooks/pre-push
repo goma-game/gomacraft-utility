@@ -1,0 +1,105 @@
+#!/bin/sh
+# クラウドのセッションから、⚠ 既定の枝(main)と本番の枝(production)への push・⚠ 強制 push・⚠ ref の削除を断る。
+# ⚠ **手元では何もしない**(`CLAUDE_CODE_REMOTE` が無ければ即 0 — 手元の振る舞いは変えない)。
+#
+# ⚠⚠ **なぜ要るか**(2026-09-26 に実測): クラウドのセッションから、⚠ **作業ブランチ以外への push も、
+# ⚠ main への直接 push も GitHub に通った**。⚠ 強制 push と枝の削除は auto mode の判定が止めたが、
+# ⚠ **判定は確率で止める仕組みで、保証ではない**。⚠ セッションに「作業ブランチ」の指定も無かった。
+# ⚠ **GitHub の ruleset は使わない**(有料限定 — ⚠ 基本は無料プランで完結させる。ユーザ決定 2026-09-26)。
+# ⚠ **クラウドは PR まで**(マージは手元)なので、⚠ クラウドが既定の枝を直接動かす正規の場面は無い。
+#
+# ⚠ **断るもの**(⚠ 1 つでも当たれば push 全体を断る — git は pre-push が非 0 なら何も送らない):
+#   - ⚠ **既定の枝への push**: `refs/heads/main` と、⚠ `refs/remotes/<remote>/HEAD` が指す枝
+#     (⚠ 読めないとき = remote を URL で渡した・HEAD を持たない clone でも、⚠ main は必ず断る)
+#   - ⚠ **本番の枝への push**: `refs/heads/production`(gomabase ADR-0094 —— ⚠ production を動かすのは
+#     手元の昇格の入口と hotfix の PR のマージだけ。⚠ 枝を持たないリポジトリでも同じ中身で断る)
+#   - ⚠ **ref の削除**(送る側の oid が 0 — 枝もタグも)
+#   - ⚠ **fast-forward でない更新**(= 強制 push。⚠ 先の oid が送る oid の祖先でなければ断る。
+#     ⚠ **先の oid が手元に無いときも断る**(祖先か確かめられない — ⚠ 先に fetch して取り込めば通る)
+#   - ⚠ **枝(`refs/heads/`)以外の既存の ref の書き換え**(タグの付け替え。⚠ 祖先へ進めても git は強制を要する)
+# ⚠ **通すもの**: 上の断るものに当たらない新しい ref の作成・枝の fast-forward の更新(作業ブランチを積んでいく普通の push)。
+#
+# ⚠ **目印は `CLAUDE_CODE_REMOTE` に空でない値が入っていること**(クラウドでは `true`。⚠ **`true` 以外の値でも
+# クラウドとみなす** — ⚠ 値の揺れで素通しにしない。⚠ **未設定と空は手元** — GitHome の `.agents/bin/_cloud.sh` と
+# 同じ読み方で、⚠ 同じ目印を入口とフックで違う意味に読まない)。⚠ `CLAUDE_CODE_REMOTE=` を付けて打てば通るが、
+# ⚠ それは `--no-verify` と同じ迂回で、規則で禁じる(フックは迂回を止める道具ではなく、うっかりを止める道具)。
+#
+# ⚠ **判断の正は GitHome**(`AGENTS.md` の git hooks の項と `cloud-session` スキル §1)。ここには振る舞いと理由だけを置く。
+#
+# ⚠⚠ **この中身は GitHome と各作業リポジトリに同じ blob で置く**(⚠ **薄い呼び出しにしない**):
+#   - ⚠ **単体で開いたクラウドのセッションには GitHome が無い**ことがある。⚠ 呼び出し先が無いとき、
+#     ⚠ 断れば全部の push が止まり、⚠ 通せば守りが消える(fail-open)—— ⚠ どちらにも倒せない。
+#   - ⚠ **揃いは GitHome の検査が見る**(⚠ 直すときは GitHome の `.githooks/pre-push` を直し、
+#     ⚠ 同じ中身を全部の作業リポジトリへ配る)。
+# ⚠ **効くには `core.hooksPath` が `.githooks` を指している必要がある**(⚠ クラウドでは GitHome の
+# `cloud-setup.sh` と setup script の 1 行が global に向ける)。
+#
+# ⚠ **`--no-verify` で迂回しない**(GitHome の規則)。⚠ 断られたら、作業ブランチへ push して PR で出す。
+set -u
+[ -n "${CLAUDE_CODE_REMOTE:-}" ] || exit 0
+
+remote=${1:-}
+default=
+if [ -n "$remote" ]; then
+  default=$(git symbolic-ref -q "refs/remotes/$remote/HEAD" 2> /dev/null) || default=
+  default=${default#"refs/remotes/$remote/"}
+fi
+
+is_zero() {
+  case "$1" in
+    *[!0]*) return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
+refused=
+refuse() { refused="$refused
+  - $1: $2"; }
+
+# ⚠ 標準入力の 1 行 = `<送る ref> <送る oid> <先の ref> <先の oid>`
+while read -r local_ref local_oid remote_ref remote_oid; do
+  [ -n "$local_ref$local_oid$remote_ref$remote_oid" ] || continue
+  # ⚠ **読めない行は断る**(⚠ 読めないことを「通す」に倒さない)
+  if [ -z "$local_oid" ] || [ -z "$remote_ref" ] || [ -z "$remote_oid" ]; then
+    refuse "${remote_ref:-?}" "pre-push の入力を読めない($local_ref $local_oid $remote_ref $remote_oid)"
+    continue
+  fi
+  if is_zero "$local_oid"; then
+    refuse "$remote_ref" "削除"
+    continue
+  fi
+  if [ "$remote_ref" = refs/heads/main ] || { [ -n "$default" ] && [ "$remote_ref" = "refs/heads/$default" ]; }; then
+    refuse "$remote_ref" "既定の枝への push"
+    continue
+  fi
+  if [ "$remote_ref" = refs/heads/production ]; then
+    refuse "$remote_ref" "本番の枝への push(production は手元の昇格の入口と hotfix の PR でだけ動かす)"
+    continue
+  fi
+  is_zero "$remote_oid" && continue
+  # ⚠ **枝(`refs/heads/`)以外の既存の ref は、書き換えそのものを断る**(⚠ タグの付け替えは祖先へ進めても
+  # git が強制を要する — ⚠ 祖先の判定で通すと、⚠ `--force` のタグの付け替えが届く)
+  case "$remote_ref" in
+    refs/heads/*) ;;
+    *)
+      refuse "$remote_ref" "枝以外の既存の ref の書き換え(タグの付け替えなど — 強制 push)"
+      continue
+      ;;
+  esac
+  if ! git cat-file -e "$remote_oid^{commit}" 2> /dev/null; then
+    refuse "$remote_ref" "先の中身($remote_oid)が手元に無い — 強制 push になる(先に fetch して取り込めば通る)"
+  elif ! git merge-base --is-ancestor "$remote_oid" "$local_oid" 2> /dev/null; then
+    refuse "$remote_ref" "fast-forward でない更新(強制 push)"
+  fi
+done
+
+[ -n "$refused" ] || exit 0
+cat >&2 <<EOF
+REFUSED(pre-push): クラウドのセッション(CLAUDE_CODE_REMOTE=$CLAUDE_CODE_REMOTE)では、この push を送らない:$refused
+  理由: クラウドは PR まで。既定の枝を動かす・履歴を書き換える・枝を消すのは手元で行う
+        (GitHub には届いてしまうので、ここで断る。ruleset は無料プランに無い)。
+  → 作業ブランチへ、新しい枝か fast-forward で push し、PR で出す(GitHome の pr-and-watch.sh)。
+  → 強制が要る事情(rebase など)なら、新しい名前の枝で出し直す。
+  → --no-verify で迂回しない。
+EOF
+exit 1
