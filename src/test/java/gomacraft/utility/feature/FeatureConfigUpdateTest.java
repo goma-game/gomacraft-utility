@@ -40,6 +40,14 @@ class FeatureConfigUpdateTest {
     }
 
     @Test
+    void replacesEveryDuplicateAndDoesNotRepeatAnEmptyHeader() {
+        String after = FeatureConfig.update("[features]\na = true\nb = true\na = true\n", Map.of("a", false));
+        assertEquals("[features]\na = false\nb = true\na = false\n", after);
+        String empty = FeatureConfig.update("[features]\n", Map.of("a", false));
+        assertEquals("[features]\na = false\n", empty);
+    }
+
+    @Test
     void addsTheSectionWhenMissing() {
         String after = FeatureConfig.update("# 空\n", Map.of("emi_ae_stock", false));
         assertEquals(FeatureConfig.Value.FALSE, FeatureConfig.parse(after).value("emi_ae_stock").orElseThrow());

@@ -24,13 +24,13 @@ class ShareSettingsMigrationTest {
         Files.writeString(dir.resolve(ShareSettings.FILE_NAME), "default_target = \"both\"\nchooser_modifier = \"alt\"\n");
         ClientSettings s = settings();
         s.parse("");
-        assertTrue(ShareSettings.migrateLegacy(s, dir));
+        assertTrue(ShareSettings.migrateLegacy(s, dir, w -> { }));
         ShareSettings read = ShareSettings.from(s);
         assertEquals(Target.BOTH, read.defaultTarget());
         assertEquals(ShareSettings.Modifier.ALT, read.chooserModifier());
         assertTrue(Files.exists(dir.resolve(ShareSettings.FILE_NAME)), "前の置き場を消した");
         // 二度目は移さない(手元の設定に書かれた値が正)
-        assertFalse(ShareSettings.migrateLegacy(s, dir));
+        assertFalse(ShareSettings.migrateLegacy(s, dir, w -> { }));
     }
 
     @Test
@@ -38,7 +38,7 @@ class ShareSettingsMigrationTest {
         Files.writeString(dir.resolve(ShareSettings.FILE_NAME), "default_target = \"both\"\n");
         ClientSettings s = settings();
         s.parse("[screenshot_share]\ndefault_target = \"screenshot\"\n");
-        assertFalse(ShareSettings.migrateLegacy(s, dir));
+        assertFalse(ShareSettings.migrateLegacy(s, dir, w -> { }));
         assertEquals(Target.SCREENSHOT, ShareSettings.from(s).defaultTarget());
     }
 
@@ -46,7 +46,7 @@ class ShareSettingsMigrationTest {
     void defaultsWithoutAnyFile(@TempDir Path dir) throws Exception {
         ClientSettings s = settings();
         s.parse("");
-        assertFalse(ShareSettings.migrateLegacy(s, dir));
+        assertFalse(ShareSettings.migrateLegacy(s, dir, w -> { }));
         assertEquals(Target.CHAT, ShareSettings.from(s).defaultTarget());
         assertEquals(ShareSettings.Modifier.CTRL, ShareSettings.from(s).chooserModifier());
     }

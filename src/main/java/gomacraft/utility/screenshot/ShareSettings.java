@@ -112,12 +112,17 @@ public record ShareSettings(Target defaultTarget, Modifier chooserModifier, List
      * 前の置き場({@link #FILE_NAME})から、手元の設定へ一度だけ移す(手元の設定にまだどちらの値も書かれていないときだけ)。
      * 前のファイルは消さない(前の版の Mod へ戻したときに読める)。移したら true(呼ぶ側が書き戻す)。
      */
-    public static boolean migrateLegacy(ClientSettings settings, Path configDir) throws IOException {
+    public static boolean migrateLegacy(ClientSettings settings, Path configDir, java.util.function.Consumer<String> warn)
+            throws IOException {
         Path file = configDir.resolve(FILE_NAME);
         if (settings.isWritten(DEFAULT_TARGET) || settings.isWritten(CHOOSER_MODIFIER) || !Files.exists(file)) {
             return false;
         }
         ShareSettings legacy = parse(Files.readString(file, StandardCharsets.UTF_8));
+        // 前のファイルの読めない値は、移すときに警告へ出す(黙って既定の値に替えない)
+        for (String problem : legacy.problems()) {
+            warn.accept("gomacraft_utility: 前のスクショの投稿の設定(" + FILE_NAME + "): " + problem);
+        }
         settings.set(DEFAULT_TARGET, legacy.defaultTarget().name().toLowerCase(Locale.ROOT));
         settings.set(CHOOSER_MODIFIER, legacy.chooserModifier().key());
         return true;

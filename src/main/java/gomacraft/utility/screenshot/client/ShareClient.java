@@ -101,7 +101,7 @@ public final class ShareClient {
         client.register(ShareSettings.CHOOSER_MODIFIER);
         client.onChange(() -> Features.guard(ScreenshotFeatures.SHARE, () -> {
             try {
-                if (ShareSettings.migrateLegacy(client, FMLPaths.CONFIGDIR.get())) {
+                if (ShareSettings.migrateLegacy(client, FMLPaths.CONFIGDIR.get(), LOGGER::warn)) {
                     client.save();
                 }
             } catch (IOException e) {

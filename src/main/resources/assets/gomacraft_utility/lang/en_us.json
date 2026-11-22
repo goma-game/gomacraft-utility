@@ -23,6 +23,8 @@
   "gomacraft_utility.feature.ae2_english_search": "AE2: search by English names",
   "gomacraft_utility.feature.ae2_search_key": "AE2: F key sends to the search box",
   "gomacraft_utility.feature.ae2_search_history": "AE2: search history",
+  "gomacraft_utility.feature.ae2_search_sync_toggle": "AE2: double-click the search box to flip sync for now",
+  "gomacraft_utility.feature.ae2_tooltip_search_cache": "AE2: faster tooltip search (prebuilt index)",
   "gomacraft_utility.feature.naturescompass_search": "Nature's Compass: search by English / mod names",
   "gomacraft_utility.feature.explorerscompass_search": "Explorer's Compass: search by English / mod names",
   "gomacraft_utility.feature.mcjtylib_text": "RFTools family: translate hard-coded English",

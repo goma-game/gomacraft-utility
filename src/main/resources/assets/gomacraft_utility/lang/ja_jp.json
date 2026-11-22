@@ -23,6 +23,8 @@
   "gomacraft_utility.feature.ae2_english_search": "AE2: 英語名でも検索",
   "gomacraft_utility.feature.ae2_search_key": "AE2: F キーで検索欄へ送る",
   "gomacraft_utility.feature.ae2_search_history": "AE2: 検索語の履歴",
+  "gomacraft_utility.feature.ae2_search_sync_toggle": "AE2: 検索欄のダブルクリックで同期をその場だけ反転",
+  "gomacraft_utility.feature.ae2_tooltip_search_cache": "AE2: ツールチップの検索を作り置きで軽くする",
   "gomacraft_utility.feature.naturescompass_search": "Nature's Compass: 英語名・Mod 名でも検索",
   "gomacraft_utility.feature.explorerscompass_search": "Explorer's Compass: 英語名・Mod 名でも検索",
   "gomacraft_utility.feature.mcjtylib_text": "RFTools 系: 英語のままの文に訳を当てる",

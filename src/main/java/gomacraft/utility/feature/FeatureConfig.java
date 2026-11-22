@@ -88,44 +88,9 @@ public final class FeatureConfig {
      * 並びは残す)、無い名前は {@code [features]} の最後に足す。{@code [features]} が無ければ足す。
      */
     public static String update(String text, Map<String, Boolean> changes) {
-        List<String> lines = new java.util.ArrayList<>(List.of(text.split("\\R", -1)));
-        Map<String, Boolean> rest = new LinkedHashMap<>(changes);
-        String section = "";
-        int endOfFeatures = -1;
-        for (int i = 0; i < lines.size(); i++) {
-            String line = lines.get(i).strip();
-            Matcher sec = SECTION.matcher(line);
-            if (sec.matches()) {
-                section = sec.group(1);
-                continue;
-            }
-            if (!section.equals("features")) {
-                continue;
-            }
-            if (!line.isEmpty() && !line.startsWith("#")) {
-                endOfFeatures = i;
-            }
-            Matcher entry = ENTRY.matcher(line);
-            if (entry.matches() && rest.containsKey(entry.group(1))) {
-                String comment = entry.group(3) == null ? "" : "  " + entry.group(3);
-                lines.set(i, entry.group(1) + " = " + rest.remove(entry.group(1)) + comment);
-            }
-        }
-        if (!rest.isEmpty()) {
-            List<String> added = new java.util.ArrayList<>();
-            rest.forEach((id, on) -> added.add(id + " = " + on));
-            if (endOfFeatures < 0) {
-                if (!lines.isEmpty() && lines.get(lines.size() - 1).isEmpty()) {
-                    lines.remove(lines.size() - 1);
-                }
-                lines.add("[features]");
-                lines.addAll(added);
-                lines.add("");
-            } else {
-                lines.addAll(endOfFeatures + 1, added);
-            }
-        }
-        return String.join("\n", lines);
+        Map<String, String> values = new LinkedHashMap<>();
+        changes.forEach((id, on) -> values.put(id, on.toString()));
+        return TomlLines.update(text, Map.of("features", values));
     }
 
     /** 設定のファイルの値を書き換える(無ければ既定の中身から作る)。効くのは次の起動から(mixin の当否は起動で決まる)。 */

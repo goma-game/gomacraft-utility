@@ -1,5 +1,6 @@
 package gomacraft.utility.settings;
 
+import gomacraft.utility.feature.TomlLines;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -113,6 +114,10 @@ public final class ClientSettings {
     private final List<String> problems = new ArrayList<>();
     private final List<Runnable> listeners = new ArrayList<>();
     private Path file;
+    /** 読んだ中身(書き戻すときは、この上で値の行だけを替える)。まだ無ければ null。 */
+    private String original;
+    /** ファイルを読めなかった(書き戻しを断る)。 */
+    private boolean unreadable;
 
     /**
      * 値が変わり得たとき(読んだ後・書き戻した後)に呼ぶもの。機能が値を自分の形へ写すのに使う。例外は飲まずに投げる
@@ -176,6 +181,7 @@ public final class ClientSettings {
     public synchronized void parse(String text) {
         raw.clear();
         problems.clear();
+        original = text;
         String section = "";
         for (String line0 : text.split("\\R")) {
             String line = line0.strip();
@@ -202,22 +208,19 @@ public final class ClientSettings {
         }
     }
 
-    /** 中身を書く文字列(宣言された項目は既定の値も含めて全部、知らない項目は読んだまま)。 */
+    /**
+     * 中身を書く文字列。読んだ中身の上で、宣言された項目の行の値だけを替える(手で書いたコメント・知らない項目・
+     * 読めない行は残す —— {@link TomlLines})。無い項目は既定の値も含めて足す。初めて作るときは頭に説明を置く。
+     */
     public synchronized String render() {
-        Map<String, Map<String, String>> out = new LinkedHashMap<>();
+        Map<String, Map<String, String>> values = new LinkedHashMap<>();
         for (Setting<?> s : settings.values()) {
-            out.computeIfAbsent(s.feature(), f -> new LinkedHashMap<>()).put(s.key(), current(s));
+            values.computeIfAbsent(s.feature(), f -> new LinkedHashMap<>()).put(s.key(), current(s));
         }
-        raw.forEach((section, entries) -> entries.forEach(
-                (k, v) -> out.computeIfAbsent(section, f -> new LinkedHashMap<>()).putIfAbsent(k, v)));
-        StringBuilder sb = new StringBuilder();
-        sb.append("# gomacraft_utility の手元の設定(機能ごとの節)。ゲームの中の設定の画面からも変えられる。\n");
-        sb.append("# 読めない値は既定の値を使う。\n");
-        out.forEach((section, entries) -> {
-            sb.append('\n').append('[').append(section).append("]\n");
-            entries.forEach((k, v) -> sb.append(k).append(" = ").append(v).append('\n'));
-        });
-        return sb.toString();
+        String base = original != null ? original
+                : "# gomacraft_utility の手元の設定(機能ごとの節)。ゲームの中の設定の画面からも変えられる。\n"
+                        + "# 読めない値は既定の値を使う。\n";
+        return TomlLines.update(base, values);
     }
 
     private <T> String current(Setting<T> setting) {
@@ -228,14 +231,19 @@ public final class ClientSettings {
     public synchronized void load(Path configDir, Consumer<String> warn) {
         file = configDir.resolve(FILE_NAME);
         boolean exists = Files.exists(file);
+        unreadable = false;
         try {
             if (exists) {
                 parse(Files.readString(file, StandardCharsets.UTF_8));
             } else {
                 raw.clear();
+                original = null;
             }
         } catch (IOException e) {
-            warn.accept("gomacraft_utility: 手元の設定を読めない(既定の値を使う): " + e);
+            // UTF-8 でない・読めない: 既定の値で動くが、書き戻さない(人が書いた中身を既定の値で消さない)
+            unreadable = true;
+            raw.clear();
+            warn.accept("gomacraft_utility: 手元の設定を読めない(既定の値で動き、ファイルは書き換えない): " + e);
         }
         problems().forEach(p -> warn.accept("gomacraft_utility: " + p));
         // 機能が値を写す(前の置き場からの移し替えもここ。既定の値でファイルを作るのはその後)
@@ -254,8 +262,13 @@ public final class ClientSettings {
         if (file == null) {
             return;
         }
+        if (unreadable) {
+            throw new IOException(file + " を読めなかったので、書き戻さない(ファイルを直してから起動し直す)");
+        }
+        String text = render();
         Files.createDirectories(file.getParent());
-        Files.writeString(file, render(), StandardCharsets.UTF_8);
+        Files.writeString(file, text, StandardCharsets.UTF_8);
+        original = text;
         fire();
     }
 }
