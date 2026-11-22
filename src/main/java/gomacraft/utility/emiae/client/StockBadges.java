@@ -3,6 +3,9 @@ package gomacraft.utility.emiae.client;
 import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
+import appeng.api.stacks.AmountFormat;
+import appeng.client.gui.me.common.StackSizeRenderer;
+import appeng.core.AEConfig;
 import appeng.menu.me.common.GridInventoryEntry;
 import appeng.menu.me.common.IClientRepo;
 import appeng.menu.me.common.MEStorageMenu;
@@ -14,7 +17,6 @@ import dev.emi.emi.runtime.EmiDrawContext;
 import dev.emi.emi.runtime.EmiFavorite;
 import dev.emi.emi.screen.EmiScreenManager;
 import gomacraft.utility.Features;
-import gomacraft.utility.emiae.CountFormat;
 import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.emiae.StockIndex;
 import java.util.IdentityHashMap;
@@ -43,7 +45,6 @@ public final class StockBadges {
     /** EMI の品 → AE の鍵。品の実体は一覧の中で同じものが使い回されるので、実体で覚える。 */
     private static final Map<EmiStack, Optional<AEKey>> KEYS = new IdentityHashMap<>();
     private static final int KEY_CACHE_LIMIT = 16384;
-    private static final int CRAFTABLE_COLOR = 0xFF7FFF7F;
 
     private StockBadges() {
     }
@@ -74,9 +75,8 @@ public final class StockBadges {
         PoseStack pose = graphics.pose();
         List<? extends EmiIngredient> stacks = space.getStacks();
         int i = startIndex;
+        // 品の絵より上に描く高さ(z + 200)は、AE2 の StackSizeRenderer が自分で上げる
         pose.pushPose();
-        // 品の絵(z ≒ 150 前後)より上に描く。バニラの個数の文字と同じ高さ
-        pose.translate(0, 0, 200);
         try {
             outer:
             for (int yo = 0; yo < space.th; yo++) {
@@ -93,7 +93,7 @@ public final class StockBadges {
                     // EMI は品を (cx + 1, cy + 1) に 16 × 16 で描く
                     int x = space.getX(xo, yo) + 1;
                     int y = space.getY(xo, yo) + 1;
-                    drawBadge(graphics, pose, font, x, y, stock);
+                    drawBadge(graphics, key, font, x, y, stock);
                 }
             }
         } finally {
@@ -104,18 +104,28 @@ public final class StockBadges {
         }
     }
 
-    private static void drawBadge(GuiGraphics graphics, PoseStack pose, Font font, int x, int y, StockIndex.Stock stock) {
-        pose.pushPose();
-        pose.scale(0.5f, 0.5f, 1f);
-        if (stock.stored() > 0) {
-            String text = CountFormat.shortCount(stock.stored());
-            int width = font.width(text);
-            graphics.drawString(font, text, (x + 16) * 2 - width, (y + 16) * 2 - font.lineHeight, 0xFFFFFFFF, true);
+    /**
+     * AE2 の端末の品の欄と同じ描き方にする({@code MEStorageScreen#renderSlot} と同じ並び。字の大きさ・位置・数の書き方は
+     * AE2 自身の {@link StackSizeRenderer} と {@code formatAmount} で、AE2 の設定「大きな字」にも従う)。
+     *
+     * <ul>
+     *   <li>在庫が無くて作れる: 右下に「+」だけ。</li>
+     *   <li>在庫が在る: 右下に数。作れるなら、左上に小さな「+」も。</li>
+     * </ul>
+     */
+    private static void drawBadge(GuiGraphics graphics, AEKey key, Font font, int x, int y, StockIndex.Stock stock) {
+        boolean largeFonts = AEConfig.instance().isUseLargeFonts();
+        if (stock.stored() <= 0) {
+            if (stock.craftable()) {
+                StackSizeRenderer.renderSizeLabel(graphics, font, x, y, "+");
+            }
+            return;
         }
+        AmountFormat format = largeFonts ? AmountFormat.SLOT_LARGE_FONT : AmountFormat.SLOT;
+        StackSizeRenderer.renderSizeLabel(graphics, font, x, y, key.formatAmount(stock.stored(), format), largeFonts);
         if (stock.craftable()) {
-            graphics.drawString(font, "+", x * 2, y * 2, CRAFTABLE_COLOR, true);
+            StackSizeRenderer.renderSizeLabel(graphics, font, x - 11, y - 11, "+", false);
         }
-        pose.popPose();
     }
 
     /** 開いている端末の写しで索引を新しくする。端末が開いていなければ索引を空にして false。 */
