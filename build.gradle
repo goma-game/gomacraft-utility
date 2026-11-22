@@ -67,7 +67,21 @@ neoForge {
     }
 }
 
+// 当てる先の Mod(組み立てにだけ使う。配る jar には入れず、動かす側に在るときだけ機能が有効になる)
+repositories {
+    // AE2 は Maven Central(org.appliedenergistics)
+    mavenCentral()
+    exclusiveContent {
+        forRepository { maven { url = 'https://maven.terraformersmc.com/' } }
+        filter { includeGroup 'dev.emi' }
+    }
+}
+
 dependencies {
+    // 段 2(EMI と AE2): 版は gradle.properties
+    compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    compileOnly "dev.emi:emi-neoforge:${emi_version}"
+
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

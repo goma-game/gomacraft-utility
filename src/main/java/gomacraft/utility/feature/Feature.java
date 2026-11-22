@@ -22,6 +22,14 @@ public interface Feature {
         return List.of();
     }
 
+    /**
+     * 画面にだけ効く機能か。true なら専用サーバでは {@code off(client only)} にする(mixin を client の欄に
+     * 置いても、サーバの 1 行に {@code on} と出て、効いていないのに効いて見えるのを避ける)。
+     */
+    default boolean clientOnly() {
+        return false;
+    }
+
     /** 有効なときに Mod の組み立ての中で 1 回呼ばれる。例外を投げたら、この機能だけが FAILED になる。 */
     default void init(FeatureContext context) throws Exception {
     }

@@ -1,5 +1,6 @@
 package gomacraft.utility;
 
+import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.feature.Feature;
 import gomacraft.utility.feature.FeatureConfig;
 import gomacraft.utility.feature.FeatureRegistry;
@@ -7,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,7 +39,8 @@ public final class Features {
     /** 機能の一覧。 */
     public static List<Feature> catalog(boolean selftest) {
         List<Feature> features = new ArrayList<>();
-        // 段 0 では機能の中身はまだ無い(枠だけ)。機能はここに足す。
+        // 段 2(EMI と AE2): goma-org/gomabase#2295
+        features.addAll(EmiAeFeatures.all());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);
@@ -77,6 +80,7 @@ public final class Features {
             LOGGER.warn("gomacraft_utility: 設定を読めないので全部の機能を切る: {}", FeatureRegistry.describe(e));
             config = FeatureConfig.unreadable();
         }
-        return FeatureRegistry.evaluate(features, FmlModLookup.INSTANCE, config, LOGGER::info);
+        return FeatureRegistry.evaluate(
+                features, FmlModLookup.INSTANCE, config, LOGGER::info, FMLEnvironment.dist.isDedicatedServer());
     }
 }
