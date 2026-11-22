@@ -4,6 +4,7 @@ import gomacraft.utility.Features;
 import gomacraft.utility.GomacraftUtility;
 import gomacraft.utility.feature.FeatureRegistry;
 import gomacraft.utility.search.SearchHistoryStore;
+import gomacraft.utility.settings.Settings;
 import java.nio.file.Path;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -62,8 +63,6 @@ public final class SearchHistoryOverlay {
     private final String feature;
     private final String scope;
     private final List<Host> hosts;
-    private final int collapsedRows;
-    private final int visibleRows;
     /** ↑↓で選んだ行(入力に合う一覧の中の位置。-1 は選んでいない)。 */
     private int selected = -1;
     /** 前に見た欄の値(変わったら選んだ行と先頭の位置を戻す)。 */
@@ -79,22 +78,30 @@ public final class SearchHistoryOverlay {
      * @param feature この窓を持つ機能(guard と FAILED の宛先)
      * @param scope 帳の名前(空ならプレイヤーの帳そのまま —— AE2 の端末の前からの帳)
      */
-    public SearchHistoryOverlay(String feature, String scope, List<Host> hosts, int collapsedRows, int visibleRows) {
+    public SearchHistoryOverlay(String feature, String scope, List<Host> hosts) {
         this.feature = feature;
         this.scope = scope;
         this.hosts = List.copyOf(hosts);
-        this.collapsedRows = collapsedRows;
-        this.visibleRows = Math.max(collapsedRows, visibleRows);
+    }
+
+    /** 出す件数(設定の画面の値。すぐ効く —— 件数の設定は AE2 の端末の履歴の機能のもので、コンパスも同じ値を使う)。 */
+    private static int collapsedRows() {
+        return Settings.client().get(Ae2SearchHistory.COLLAPSED_ROWS);
+    }
+
+    private static int visibleRows() {
+        return Math.max(collapsedRows(), Settings.client().get(Ae2SearchHistory.VISIBLE_ROWS));
     }
 
     /** 履歴のファイルを読む(1 回だけ。読めないファイルは上書きせずに、呼んだ機能を止める)。 */
-    static synchronized void loadStore(int keep) {
+    static synchronized void loadStore() {
         if (store != null) {
             return;
         }
         file = FMLPaths.CONFIGDIR.get().resolve(GomacraftUtility.MOD_ID).resolve("search_history.json");
         try {
-            store = SearchHistoryStore.load(file, keep);
+            // 持つ件数は、設定を読む前の既定の値で読み、記すたびに今の設定の値へ合わせる(setMaxRecent)
+            store = SearchHistoryStore.load(file, Ae2SearchHistory.KEEP.defaultValue());
         } catch (Exception e) {
             throw new IllegalStateException("search history unreadable: " + FeatureRegistry.describe(e), e);
         }
@@ -146,7 +153,11 @@ public final class SearchHistoryOverlay {
 
     /** 語を記す(ほかの機能から呼ぶときも guard の中で)。 */
     public void record(String text) {
-        if (store != null && store.record(player(), text)) {
+        if (store == null) {
+            return;
+        }
+        store.setMaxRecent(Settings.client().get(Ae2SearchHistory.KEEP));
+        if (store.record(player(), text)) {
             save();
         }
     }
@@ -214,7 +225,7 @@ public final class SearchHistoryOverlay {
             return null;
         }
         boolean typing = !field.getValue().isBlank();
-        int count = typing || wide ? visibleRows : collapsedRows;
+        int count = typing || wide ? visibleRows() : collapsedRows();
         boolean hint = wide;
         Font font = Minecraft.getInstance().font;
         // 欄の上の空きに収まる行の数(画面の上の端を越えない)。上が狭いときは、端末なら左の外、端末でない画面なら欄の下へ

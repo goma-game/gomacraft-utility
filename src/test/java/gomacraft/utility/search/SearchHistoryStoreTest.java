@@ -75,6 +75,11 @@ class SearchHistoryStoreTest {
                 .map(SearchHistoryStore.Entry::text).toList(), "大文字小文字を区別しない");
         assertEquals(List.of(), store.matching("p", "IRON"), "入力そのものは出さない");
         assertEquals(3, store.matching("p", " ").size(), "空の入力なら全部");
+        store.setMaxRecent(2);
+        assertEquals(List.of("copper", "iron"), texts(store, "p"), "上限を減らしたら古いものから消す");
+        store.setMaxRecent(10);
+        store.record("p", "tin");
+        assertEquals(List.of("tin", "copper", "iron"), texts(store, "p"));
     }
 
     @Test
