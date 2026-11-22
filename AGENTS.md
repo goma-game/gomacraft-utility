@@ -38,6 +38,9 @@
   - 手元に JDK 21 が無ければ、Docker の `gradle:<版>-jdk21` の箱で `./gradlew build runGameTestServer` を回す(手元の JDK は 21 と限らない)。
 - 機能の足し方:
   - `Feature` を実装して `Features.catalog` に足す。mixin は `gomacraft.utility.mixin.<機能の名前>` の包みに置いて `gomacraft_utility.mixins.json` に並べる。
+    - クライアントの画面などに当てる機能は、`Features.catalog(selftest, client)` の `client` のときだけ一覧に入れ、mixin は `client` の欄に置く(サーバには当て先のクラスが無い。一覧に入れると、サーバで当て先を読み込もうとして FAILED になる)。機能の定義(名前・対象の Mod)のクラスはサーバでも読まれるので、クライアントのクラスを名前で持たせず、中身は `init` から呼ぶ別のクラスに置く(例: `search/SearchFeatures` と `search/client/`)。
+    - 当てる先の Mod は `build.gradle` の `compileOnly`(と当て先の試験のための `testRuntimeOnly`)に足し、版は `gradle.properties` の 1 か所に置く(パックが積む版。上げるときはパックの jar を見てから)。
+    - L1 の `MixinTargetsTest` が、当て先のクラス・メソッド・`@At` の呼び出しと field・`@Shadow`・`@Accessor` が組み立ての版の jar に在るかを見る。読める `@At` は HEAD・RETURN・TAIL・INVOKE・FIELD だけで、ほかは落とす(見方を足すまで通さない)。クライアントの機能が実際に当たったかは、gametest のサーバでは見られず、gomabase のクライアントの起動の検証が起動時の 1 行で見る。
   - injector(`@Inject`・`@Redirect`・`@ModifyArg`、MixinExtras の `@WrapOperation` など)は全部 `require = 0` と `@Group(name = "gomacraft_utility$<機能>$<injector の名前>", min = 1)` で書く。group の名前は injector ごとに分ける。
     - `require` の不足は Mixin が Error を投げて起動ごと止まり、この Mod では拾えない。group の不足は、その機能だけの FAILED に落とせる。
     - group は中の成功を合計で数えるので、2 つの injector で共有すると、片方が当て損ねても `on` のままになる。

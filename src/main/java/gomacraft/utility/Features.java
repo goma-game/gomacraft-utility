@@ -6,7 +6,9 @@ import gomacraft.utility.feature.FeatureRegistry;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import gomacraft.utility.search.SearchFeatures;
 import java.util.function.Supplier;
+import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,9 +37,12 @@ public final class Features {
     }
 
     /** 機能の一覧。 */
-    public static List<Feature> catalog(boolean selftest) {
+    public static List<Feature> catalog(boolean selftest, boolean client) {
         List<Feature> features = new ArrayList<>();
-        // 段 0 では機能の中身はまだ無い(枠だけ)。機能はここに足す。
+        // クライアントの画面に当てる機能は、クライアントでだけ一覧に入れる(サーバでは当て先のクラスが無い)
+        if (client) {
+            features.addAll(SearchFeatures.client());
+        }
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);
@@ -64,7 +69,7 @@ public final class Features {
     }
 
     private static FeatureRegistry boot() {
-        List<Feature> features = catalog(Boolean.getBoolean(SELFTEST_PROPERTY));
+        List<Feature> features = catalog(Boolean.getBoolean(SELFTEST_PROPERTY), FMLEnvironment.dist.isClient());
         FeatureConfig config;
         try {
             config = FeatureConfig.load(FMLPaths.CONFIGDIR.get(), features);

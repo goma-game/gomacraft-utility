@@ -1,0 +1,5 @@
+{
+  "key.categories.gomacraft_utility": "gomacraft utility",
+  "key.gomacraft_utility.ae2_fill_search": "Send hovered item to AE2 terminal search",
+  "gomacraft_utility.search_history.hint": "Left: search / Right: delete / Shift+Left or Middle: favorite"
+}
