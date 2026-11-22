@@ -151,6 +151,27 @@ class FeatureRegistryTest {
     }
 
     @Test
+    void serverOnlyFeaturesAreOffOnTheClient() {
+        Feature serverFix = new Feature() {
+            @Override
+            public String id() {
+                return "server_fix";
+            }
+
+            @Override
+            public boolean serverOnly() {
+                return true;
+            }
+        };
+        assertEquals("gomacraft_utility: features server_fix=off(server only)",
+                FeatureRegistry.evaluate(List.of(serverFix), mods(Map.of()), FeatureConfig.empty(), line -> { }, false)
+                        .line());
+        assertEquals("gomacraft_utility: features server_fix=on",
+                FeatureRegistry.evaluate(List.of(serverFix), mods(Map.of()), FeatureConfig.empty(), line -> { }, true)
+                        .line());
+    }
+
+    @Test
     void noFeaturesRendersNone() {
         FeatureRegistry registry = FeatureRegistry.evaluate(
                 List.of(), mods(Map.of()), FeatureConfig.empty(), line -> { });
