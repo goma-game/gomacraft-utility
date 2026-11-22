@@ -1,12 +1,13 @@
 package gomacraft.utility;
 
+import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.feature.Feature;
 import gomacraft.utility.feature.FeatureConfig;
 import gomacraft.utility.feature.FeatureRegistry;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import gomacraft.utility.search.SearchFeatures;
+import java.util.Set;
 import java.util.function.Supplier;
 import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.fml.loading.FMLPaths;
@@ -37,12 +38,12 @@ public final class Features {
     }
 
     /** 機能の一覧。 */
-    public static List<Feature> catalog(boolean selftest, boolean client) {
+    public static List<Feature> catalog(boolean selftest) {
         List<Feature> features = new ArrayList<>();
-        // クライアントの画面に当てる機能は、クライアントでだけ一覧に入れる(サーバでは当て先のクラスが無い)
-        if (client) {
-            features.addAll(SearchFeatures.client());
-        }
+        // 段 1(検索まわり): goma-org/gomabase#2295。どれも画面の機能(clientOnly)で、専用サーバでは off
+        features.addAll(SearchFeatures.all());
+        // 段 2(EMI と AE2): goma-org/gomabase#2295
+        features.addAll(EmiAeFeatures.all());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);
@@ -69,7 +70,7 @@ public final class Features {
     }
 
     private static FeatureRegistry boot() {
-        List<Feature> features = catalog(Boolean.getBoolean(SELFTEST_PROPERTY), FMLEnvironment.dist.isClient());
+        List<Feature> features = catalog(Boolean.getBoolean(SELFTEST_PROPERTY));
         FeatureConfig config;
         try {
             config = FeatureConfig.load(FMLPaths.CONFIGDIR.get(), features);
@@ -82,6 +83,7 @@ public final class Features {
             LOGGER.warn("gomacraft_utility: 設定を読めないので全部の機能を切る: {}", FeatureRegistry.describe(e));
             config = FeatureConfig.unreadable();
         }
-        return FeatureRegistry.evaluate(features, FmlModLookup.INSTANCE, config, LOGGER::info);
+        return FeatureRegistry.evaluate(
+                features, FmlModLookup.INSTANCE, config, LOGGER::info, FMLEnvironment.dist.isDedicatedServer());
     }
 }

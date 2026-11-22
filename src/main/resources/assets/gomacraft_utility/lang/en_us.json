@@ -1,5 +1,9 @@
 {
   "key.categories.gomacraft_utility": "gomacraft utility",
+  "key.gomacraft_utility.ae_quick_craft": "AE: take or craft the hovered EMI item",
+  "gomacraft_utility.ae_quick_craft.unavailable": "%s is not in the network and has no pattern",
+  "gomacraft_utility.ae_quick_craft.not_an_item": "%s cannot be moved to your inventory and has no pattern",
+  "gomacraft_utility.ae_grid_craft.timeout": "Filled the crafting grid, but %s did not appear (the materials stay in the grid)",
   "key.gomacraft_utility.ae2_fill_search": "Send hovered item to AE2 terminal search",
   "gomacraft_utility.search_history.hint": "Left: search / Right: delete / Shift+Left or Middle: favorite"
 }

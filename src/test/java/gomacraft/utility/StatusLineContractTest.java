@@ -48,18 +48,14 @@ class StatusLineContractTest {
     void catalogIdsAreValidAndUnique() {
         Set<String> seen = new HashSet<>();
         for (boolean selftest : new boolean[] {false, true}) {
-            for (boolean client : new boolean[] {false, true}) {
-                seen.clear();
-                Features.catalog(selftest, client).forEach(f -> {
-                    assertTrue(f.id().matches("[a-z0-9_]+"), f.id());
-                    assertTrue(seen.add(f.id()), f.id());
-                });
-            }
+            seen.clear();
+            Features.catalog(selftest).forEach(f -> {
+                assertTrue(f.id().matches("[a-z0-9_]+"), f.id());
+                assertTrue(seen.add(f.id()), f.id());
+            });
         }
-        for (boolean client : new boolean[] {false, true}) {
-            assertTrue(Features.catalog(false, client).stream().noneMatch(f -> f.id().startsWith("selftest")),
-                    "自己検査の機能は配る jar の一覧に入れない");
-        }
+        assertTrue(Features.catalog(false).stream().noneMatch(f -> f.id().startsWith("selftest")),
+                "自己検査の機能は配る jar の一覧に入れない");
     }
 
     @Test

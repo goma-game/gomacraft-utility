@@ -67,32 +67,46 @@ neoForge {
     }
 }
 
-// 機能が当てる先の Mod(組み立てのときだけ使う。配る jar には入れず、動かすときはパックの Mod を使う)。
-// 版は gomacraft のパック(ATM10)が積む版に合わせ、gradle.properties の 1 か所に置く。AE2 は Maven Central、
-// EMI は公式の maven。コンパスと mcjtylib は公式の maven にその版が無いので Modrinth の maven から取る
-// (sha1 は Modrinth の API とパックの jar で同じことを確かめた)。
+// 当てる先の Mod(組み立てにだけ使う。配る jar には入れず、動かす側に在るときだけ機能が有効になる)
 repositories {
+    // AE2 は Maven Central(org.appliedenergistics)
     mavenCentral()
     exclusiveContent {
         forRepository { maven { url = 'https://maven.terraformersmc.com/' } }
         filter { includeGroup 'dev.emi' }
     }
     exclusiveContent {
-        forRepository {
-            maven {
-                name = 'Modrinth'
-                url = 'https://api.modrinth.com/maven'
-            }
-        }
-        filter {
-            includeGroup 'maven.modrinth'
-        }
+        forRepository { maven { url = 'https://maven.theillusivec4.top/' } }
+        filter { includeGroup 'top.theillusivec4.curios' }
+    }
+    // 段 1(検索まわり): コンパスと mcjtylib は公式の maven にその版が無いので Modrinth の maven から取る
+    // (sha1 は Modrinth の API とパックの jar で同じことを確かめた)
+    exclusiveContent {
+        forRepository { maven { name = 'Modrinth'; url = 'https://api.modrinth.com/maven' } }
+        filter { includeGroup 'maven.modrinth' }
     }
 }
 
+// 手元と自己検査で動かすときだけ積む Mod(配る jar と、その依存の宣言には入らない)
+configurations {
+    localRuntime
+    runtimeClasspath.extendsFrom localRuntime
+    selftestRuntimeClasspath.extendsFrom localRuntime
+}
+
 dependencies {
+    // 段 2(EMI と AE2): 版は gradle.properties
     compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     compileOnly "dev.emi:emi-neoforge:${emi_version}"
+    // Curios の枠のワイヤレスの端末を拾う(Curios が在るときだけ呼ぶ)
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    selftestCompileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    localRuntime "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    localRuntime "org.appliedenergistics:guideme:${guideme_version}"
+    localRuntime "dev.emi:emi-neoforge:${emi_version}"
+    // 自己検査で Curios の枠を読む道(CuriosStacks)も通す
+    localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
+    // 段 1(検索まわり): 版は gradle.properties
     compileOnly "maven.modrinth:natures-compass:${natures_compass_version}"
     compileOnly "maven.modrinth:explorers-compass:${explorers_compass_version}"
     compileOnly "maven.modrinth:mcjtylib:${mcjtylib_version}"
@@ -102,9 +116,7 @@ dependencies {
     testRuntimeOnly "maven.modrinth:natures-compass:${natures_compass_version}"
     testRuntimeOnly "maven.modrinth:explorers-compass:${explorers_compass_version}"
     testRuntimeOnly "maven.modrinth:mcjtylib:${mcjtylib_version}"
-}
 
-dependencies {
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'

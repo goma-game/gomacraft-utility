@@ -31,7 +31,8 @@ public final class SearchFeatures {
     private SearchFeatures() {
     }
 
-    public static List<Feature> client() {
+    /** どれも画面の機能({@link Feature#clientOnly})。専用サーバでは {@code off(client only)} になる。 */
+    public static List<Feature> all() {
         return List.of(
                 feature(AE2_ENGLISH_SEARCH, List.of(Requirement.of("ae2", AE2_RANGE)),
                         context -> gomacraft.utility.search.client.EnglishNames.install(context, AE2_ENGLISH_SEARCH)),
@@ -63,6 +64,11 @@ public final class SearchFeatures {
             @Override
             public List<Requirement> requirements() {
                 return requirements;
+            }
+
+            @Override
+            public boolean clientOnly() {
+                return true;
             }
 
             @Override
