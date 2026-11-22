@@ -46,6 +46,7 @@
     - group は中の成功を合計で数えるので、2 つの injector で共有すると、片方が当て損ねても `on` のままになる。
     - L1 の `MixinContractTest` が、書き忘れと group の名前の重なりを落とす。mixin と MixinExtras の注釈は、`@At`・`@Slice`・`@Group` などの決まった部品を除いて、全部 injector として見る(知らない注釈を素通りさせない)。
   - mixin の中身と event の listener は `Features.guard("<機能>", () -> …)` で包む。有効でない機能は走らず、例外を投げた機能は FAILED になって、以後はその機能のどの部分も走らない(FAILED の機能の、当たってしまった残りの mixin を止める)。
+    - ⚠ 元の処理を包む mixin(`@WrapMethod`・`@WrapOperation` の `original.call`)は、`original.call` を guard の中に入れない(guard が例外を飲み、元の処理の例外まで隠す)。`Features.registry().isOn("<機能>")` が偽なら足した処理をせずに `original.call` だけを呼ぶ形で分ける(例: `ttf_glyph_lock`)。
   - 当て先のクラスは、起動時の 1 行の前に読み込ませる(`GomacraftMixinPlugin.preloadTargets`。初期化はしない)。クラスを読み込んだだけで副作用のあるものに当てるなら、先にここで困らないかを確かめる。
   - 自己検査(gametest のサーバ)で当てる先の Mod を動かすときは `localRuntime` に足す(公式の maven が無い Mod は cursemaven —— gomabase の配布と同じ取得元)。
   - 専用サーバだけで要る直し(クライアントの部品をサーバで呼ぶ不具合など)は、mixin の設定の `server` の一覧に置く(シングルプレイの内蔵サーバには当てない)。
