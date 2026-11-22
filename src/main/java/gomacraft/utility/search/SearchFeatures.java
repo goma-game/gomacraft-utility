@@ -16,6 +16,8 @@ public final class SearchFeatures {
     public static final String AE2_ENGLISH_SEARCH = "ae2_english_search";
     /** マウスの下の品の名前を、キー(既定は F)で AE2 の端末の検索欄へ送る。 */
     public static final String AE2_SEARCH_KEY = "ae2_search_key";
+    /** AE2 の端末のツールチップの検索({@code $})の作り置きを端末をまたいで持ち、先に作る(軽くする)。 */
+    public static final String AE2_TOOLTIP_SEARCH_CACHE = "ae2_tooltip_search_cache";
     /** AE2 の端末の検索語の履歴(検索欄の下に一覧を出す)。 */
     public static final String AE2_SEARCH_HISTORY = "ae2_search_history";
     /** Nature's Compass の検索で、英語名でも当たるようにする。 */
@@ -38,6 +40,8 @@ public final class SearchFeatures {
                         context -> gomacraft.utility.search.client.EnglishNames.install(context, AE2_ENGLISH_SEARCH)),
                 feature(AE2_SEARCH_KEY, List.of(Requirement.of("ae2", AE2_RANGE)),
                         context -> gomacraft.utility.search.client.Ae2SearchKey.init(context)),
+                feature(AE2_TOOLTIP_SEARCH_CACHE, List.of(Requirement.of("ae2", AE2_RANGE)),
+                        context -> gomacraft.utility.search.client.TooltipSearchCache.init(context)),
                 feature(AE2_SEARCH_HISTORY, List.of(Requirement.of("ae2", AE2_RANGE)),
                         context -> gomacraft.utility.search.client.Ae2SearchHistory.init(context)),
                 // コンパスと mcjtylib の版は Maven の形でないので、範囲を書かない(当て先が変われば FAILED で気付く)
