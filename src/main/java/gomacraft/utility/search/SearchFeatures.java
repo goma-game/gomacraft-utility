@@ -16,7 +16,7 @@ public final class SearchFeatures {
     public static final String AE2_ENGLISH_SEARCH = "ae2_english_search";
     /** マウスの下の品の名前を、キー(既定は F)で AE2 の端末の検索欄へ送る。 */
     public static final String AE2_SEARCH_KEY = "ae2_search_key";
-    /** AE2 の端末の検索語の履歴(検索欄の下に一覧を出す)。 */
+    /** AE2 の端末の検索語の履歴(検索欄の上に窓を出す。EMI の検索欄の語も同じ履歴に記す)。 */
     public static final String AE2_SEARCH_HISTORY = "ae2_search_history";
     /** Nature's Compass の検索で、英語名でも当たるようにする。 */
     public static final String NATURESCOMPASS_SEARCH = "naturescompass_search";

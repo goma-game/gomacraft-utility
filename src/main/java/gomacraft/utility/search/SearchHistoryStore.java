@@ -21,7 +21,7 @@ import java.util.Map;
  *
  * <ul>
  *   <li>同じ語をもう一度使うと先頭へ上がる(お気に入りは位置を変えない)。</li>
- *   <li>お気に入りは先頭にまとめて出し、数の上限で消さない。お気に入りでない語は {@link #MAX_RECENT} 件まで持つ
+ *   <li>お気に入りは先頭にまとめて出し、数の上限で消さない。お気に入りでない語は上限(既定は {@link #MAX_RECENT})件まで持つ
  *       (古いものから消す)。</li>
  * </ul>
  *
@@ -38,6 +38,38 @@ public final class SearchHistoryStore {
     }
 
     private final Map<String, List<Entry>> players = new LinkedHashMap<>();
+    /** お気に入りでない語を持つ件数の上限。 */
+    private final int maxRecent;
+
+    public SearchHistoryStore() {
+        this(MAX_RECENT);
+    }
+
+    public SearchHistoryStore(int maxRecent) {
+        if (maxRecent < 1) {
+            throw new IllegalArgumentException("maxRecent: " + maxRecent);
+        }
+        this.maxRecent = maxRecent;
+    }
+
+    /**
+     * 入力に合う語(大文字小文字を区別せずに入力を含み、入力そのものでない語)を、出す順で返す。入力が空なら全部。
+     */
+    public List<Entry> matching(String player, String input) {
+        List<Entry> all = list(player);
+        String needle = input == null ? "" : input.strip().toLowerCase(java.util.Locale.ROOT);
+        if (needle.isEmpty()) {
+            return all;
+        }
+        List<Entry> out = new ArrayList<>();
+        for (Entry e : all) {
+            String text = e.text().toLowerCase(java.util.Locale.ROOT);
+            if (text.contains(needle) && !text.equals(needle)) {
+                out.add(e);
+            }
+        }
+        return out;
+    }
 
     /** 語を使ったことを記す。空・長すぎる語は記さない。変わったら true。 */
     public boolean record(String player, String text) {
@@ -125,9 +157,9 @@ public final class SearchHistoryStore {
         return i;
     }
 
-    private static void trim(List<Entry> entries) {
+    private void trim(List<Entry> entries) {
         int recent = entries.size() - firstRecentIndex(entries);
-        while (recent > MAX_RECENT) {
+        while (recent > maxRecent) {
             entries.remove(entries.size() - 1);
             recent--;
         }
@@ -140,7 +172,12 @@ public final class SearchHistoryStore {
      * 例外を投げる: 黙って空として読むと、次の保存で人の履歴を上書きしてしまう。空・長すぎる・重なる語だけは捨てる。
      */
     public static SearchHistoryStore load(Path file) throws IOException {
-        SearchHistoryStore store = new SearchHistoryStore();
+        return load(file, MAX_RECENT);
+    }
+
+    /** {@link #load(Path)} の、お気に入りでない語の上限を決める形。 */
+    public static SearchHistoryStore load(Path file, int maxRecent) throws IOException {
+        SearchHistoryStore store = new SearchHistoryStore(maxRecent);
         if (!Files.exists(file)) {
             return store;
         }
@@ -177,7 +214,7 @@ public final class SearchHistoryStore {
                 boolean favorite = fav != null && fav.getAsBoolean();
                 if (favorite && favorites.size() < MAX_FAVORITES) {
                     favorites.add(new Entry(value, true));
-                } else if (recent.size() < MAX_RECENT) {
+                } else if (recent.size() < maxRecent) {
                     recent.add(new Entry(value, false));
                 }
             }
