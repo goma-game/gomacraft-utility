@@ -58,10 +58,12 @@ public final class ShareClient {
     /** 札の数の上限(古いものから忘れる)。 */
     private static final int MAX_TOKENS = 32;
     /**
-     * 切れ端を送る間(tick)。2 tick に 1 個(30,000 バイト)で約 300 KB/s。遅い回線でも keepalive を
-     * 詰まらせないように絞る(8 MiB でも約 30 秒 —— サーバは最後の切れ端から 60 秒届かなければ捨てる)。
+     * 1 tick に送る切れ端の上限(30,000 バイト × 8 = 240 KB / tick)。⚠ 速さの絞りは送りの列
+     * ({@code channel().isWritable()})が持つ: 列が詰まったら(遅い回線)その tick は送らず、keepalive などの
+     * ほかの通信を先に通す。⚠ 固定の 300 KB/s に絞っていたときは、7.8 MB の PNG に 26 秒かかった
+     * (mcdev の実測 —— goma-org/gomabase#2295 の 12)。
      */
-    private static final int TICKS_PER_CHUNK = 2;
+    private static final int MAX_CHUNKS_PER_TICK = 8;
 
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final Logger LOGGER = LoggerFactory.getLogger(gomacraft.utility.GomacraftUtility.MOD_ID);
@@ -78,7 +80,6 @@ public final class ShareClient {
     private static boolean loading;
     /** 送り終えて返事を待っている送り → 札(主スレッドだけが触る)。 */
     private static final Map<Integer, String> AWAITING = new LinkedHashMap<>();
-    private static int tickCounter;
 
     /** 各自の手元の設定(普通に押したときの行き先・選ぶ画面を出す修飾キー)。 */
     private static ShareSettings settings = ShareSettings.defaults();
@@ -138,8 +139,7 @@ public final class ShareClient {
     private static Component button(String token) {
         // 説明の修飾キーは、各自の設定のもの(固定の「Ctrl」にしない)
         Component hover = Component.translatableWithFallback("gomacraft_utility.screenshot.button.hover",
-                "Post this screenshot to Discord under your name. Hold %s to choose the channel."
-                        + " Chat and player names in it are posted as they are (F1 hides the HUD).",
+                "Post this screenshot to Discord under your name. Hold %s to choose the channel.",
                 settings.chooserModifier().label);
         return Component.translatableWithFallback("gomacraft_utility.screenshot.button", "[Post to Discord]")
                 .withStyle(s -> s.withColor(ChatFormatting.AQUA)
@@ -210,7 +210,12 @@ public final class ShareClient {
                 })));
     }
 
-    /** 送る中身。PNG のまま上限を超えるときだけ JPEG に作り直す。それでも超える・読めないなら空。 */
+    /**
+     * 送る中身。PNG のまま上限を超えるときだけ JPEG に作り直す。それでも超える・読めないなら空。
+     *
+     * <p>⚠ 上限の内の PNG は作り直さない: 4K の PNG(7.8 MB)を JPEG(0.92)にしても 2.3 MB にしかならず、
+     * 作り直しに 3〜4 秒かかる(実測)。速さの律速だった固定の絞りを外したので、PNG のまま送るほうが速い。
+     */
     static Optional<byte[]> load(Path file) {
         try {
             byte[] png = Files.readAllBytes(file);
@@ -263,23 +268,25 @@ public final class ShareClient {
             sending = null;
             return;
         }
-        if (++tickCounter % TICKS_PER_CHUNK != 0) {
-            return;
-        }
         ClientPacketListener connection = Minecraft.getInstance().getConnection();
-        if (connection == null || !connection.getConnection().channel().isWritable()) {
-            // 送りの列が詰まっている(遅い回線)間は待つ(keepalive などのほかの通信を先に通す)
+        if (connection == null) {
             return;
         }
         int total = current.data().length;
         int count = ScreenshotRules.chunkCount(total);
         int next = current.next();
-        int from = next * ScreenshotRules.CHUNK_BYTES;
-        byte[] piece = java.util.Arrays.copyOfRange(current.data(), from,
-                from + ScreenshotRules.chunkLength(total, next));
-        PacketDistributor.sendToServer(new ScreenshotPayloads.Chunk(current.upload(), total, next,
-                current.target().ordinal(), piece));
-        next++;
+        // 送りの列が詰まっている(遅い回線)間は送らない(keepalive などのほかの通信を先に通す)
+        for (int sent = 0; sent < MAX_CHUNKS_PER_TICK && next < count
+                && connection.getConnection().channel().isWritable(); sent++, next++) {
+            int from = next * ScreenshotRules.CHUNK_BYTES;
+            byte[] piece = java.util.Arrays.copyOfRange(current.data(), from,
+                    from + ScreenshotRules.chunkLength(total, next));
+            PacketDistributor.sendToServer(new ScreenshotPayloads.Chunk(current.upload(), total, next,
+                    current.target().ordinal(), piece));
+        }
+        if (next == current.next()) {
+            return;
+        }
         if (next < count) {
             sending = new Sending(current.upload(), current.data(), next, current.token(), current.target());
         } else {
