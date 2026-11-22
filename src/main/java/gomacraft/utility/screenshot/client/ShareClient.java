@@ -136,9 +136,11 @@ public final class ShareClient {
     }
 
     private static Component button(String token) {
+        // 説明の修飾キーは、各自の設定のもの(固定の「Ctrl」にしない)
         Component hover = Component.translatableWithFallback("gomacraft_utility.screenshot.button.hover",
-                "Post this screenshot to Discord under your name. Hold Ctrl (configurable) to choose the channel."
-                        + " Chat and player names in it are posted as they are (F1 hides the HUD).");
+                "Post this screenshot to Discord under your name. Hold %s to choose the channel."
+                        + " Chat and player names in it are posted as they are (F1 hides the HUD).",
+                settings.chooserModifier().label);
         return Component.translatableWithFallback("gomacraft_utility.screenshot.button", "[Post to Discord]")
                 .withStyle(s -> s.withColor(ChatFormatting.AQUA)
                         .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/" + COMMAND + " " + token))
@@ -170,7 +172,6 @@ public final class ShareClient {
     private static boolean modifierDown() {
         return switch (settings.chooserModifier()) {
             case CTRL -> Screen.hasControlDown();
-            case SHIFT -> Screen.hasShiftDown();
             case ALT -> Screen.hasAltDown();
         };
     }
@@ -263,6 +264,11 @@ public final class ShareClient {
             return;
         }
         if (++tickCounter % TICKS_PER_CHUNK != 0) {
+            return;
+        }
+        ClientPacketListener connection = Minecraft.getInstance().getConnection();
+        if (connection == null || !connection.getConnection().channel().isWritable()) {
+            // 送りの列が詰まっている(遅い回線)間は待つ(keepalive などのほかの通信を先に通す)
             return;
         }
         int total = current.data().length;

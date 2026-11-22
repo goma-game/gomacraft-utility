@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  *
  * <ul>
  *   <li>{@code default_target}: 普通に押したときの行き先({@code chat} / {@code screenshot} / {@code both})。既定は chat。
- *   <li>{@code chooser_modifier}: 押しながら押すと行き先を選ぶ画面を出す修飾キー({@code ctrl} / {@code shift} /
+ *   <li>{@code chooser_modifier}: 押しながら押すと行き先を選ぶ画面を出す修飾キー({@code ctrl} /
  *       {@code alt})。既定は ctrl。
  * </ul>
  *
@@ -27,11 +27,21 @@ public record ShareSettings(Target defaultTarget, Modifier chooserModifier, List
 
     private static final Pattern ENTRY = Pattern.compile("([a-z_]+)\\s*=\\s*\"?([A-Za-z]*)\"?\\s*(#.*)?");
 
-    /** 選ぶ画面を出す修飾キー。 */
+    /**
+     * 選ぶ画面を出す修飾キー。⚠ Shift は選べない: バニラの {@code Screen#handleComponentClicked} は
+     * Shift を押している間 ClickEvent を飛ばして挿入の文字を入れるだけなので、押しても何も起きない
+     * (1.21.1 の実物で確かめた)。
+     */
     public enum Modifier {
-        CTRL,
-        SHIFT,
-        ALT;
+        CTRL("Ctrl"),
+        ALT("Alt");
+
+        /** 説明の文に出す名前。 */
+        public final String label;
+
+        Modifier(String label) {
+            this.label = label;
+        }
 
         String key() {
             return name().toLowerCase(Locale.ROOT);
@@ -76,7 +86,7 @@ public record ShareSettings(Target defaultTarget, Modifier chooserModifier, List
                     if (found != null) {
                         modifier = found;
                     } else {
-                        problems.add("chooser_modifier の値が違う(ctrl / shift / alt): " + value);
+                        problems.add("chooser_modifier の値が違う(ctrl / alt): " + value);
                     }
                 }
                 default -> problems.add("知らない設定: " + m.group(1));
@@ -102,7 +112,7 @@ public record ShareSettings(Target defaultTarget, Modifier chooserModifier, List
                 #   chat = そのサーバのチャットのチャンネル / screenshot = スクショのチャンネル / both = 両方
                 #   (チャットのチャンネルが無いサーバでは、chat もスクショのチャンネルへ出る)
                 default_target = "chat"
-                # chooser_modifier: これを押しながら押すと、行き先を選ぶ画面が出る(ctrl / shift / alt)。
+                # chooser_modifier: これを押しながら押すと、行き先を選ぶ画面が出る(ctrl / alt)。Shift はゲームが別の操作に使うので選べない。
                 chooser_modifier = "ctrl"
                 """;
     }

@@ -25,9 +25,9 @@ class ShareSettingsTest {
 
     @Test
     void readsTheChosenValues() {
-        ShareSettings s = ShareSettings.parse("default_target = \"both\"\nchooser_modifier = shift\n");
+        ShareSettings s = ShareSettings.parse("default_target = \"both\"\nchooser_modifier = alt\n");
         assertEquals(Target.BOTH, s.defaultTarget());
-        assertEquals(Modifier.SHIFT, s.chooserModifier());
+        assertEquals(Modifier.ALT, s.chooserModifier());
     }
 
     @Test
