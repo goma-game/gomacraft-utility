@@ -1,0 +1,85 @@
+name: release
+
+# tag(v<版>)を押したら、build と同じ検査を回してから GitHub Release を作り、jar と sha256 を置く。
+# gomabase の台帳は release の asset の URL と sha256 をピンして取り込む(tools/client_additions.py の
+# validate_provider が見るのは、tag・draft でないこと・名前の合う asset が 1 つであること)。
+#
+# 止めるもの(どれも作り直しで hash が変わる・取り違える形):
+# - tag の commit が main に無い
+# - tag と gradle.properties の mod_version が合わない
+# - 同じ tag の release が既に在る(上書きしない。作り直すなら新しい版を切る)
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: tag を確かめる
+        run: |
+          set -eu
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "NG: tag $TAG の commit $GITHUB_SHA が main に無い" >&2
+            exit 1
+          fi
+          version=$(sed -n 's/^mod_version=//p' gradle.properties)
+          if [ "$TAG" != "v$version" ]; then
+            echo "NG: tag $TAG と mod_version=$version が合わない" >&2
+            exit 1
+          fi
+          if out=$(gh release view "$TAG" 2>&1); then
+            echo "NG: release $TAG は既に在る(上書きしない)" >&2
+            exit 1
+          elif ! printf '%s\n' "$out" | grep -q 'release not found'; then
+            echo "NG: release $TAG の有無を確かめられない: $out" >&2
+            exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c  # v6.4.1
+        with:
+          cache-read-only: true
+      - name: 組み立てと試験
+        run: ./gradlew --no-daemon build
+      - name: 配る jar を確かめる
+        run: sh .github/scripts/check-build.sh jar
+      - name: 起動の自己検査(gametest のサーバ)
+        run: ./gradlew --no-daemon runGameTestServer
+      - name: 自己検査のログを確かめる
+        run: sh .github/scripts/check-build.sh selftest run-selftest/logs/latest.log
+      - name: release を作る
+        run: |
+          set -eu
+          jar="build/libs/gomacraft_utility-$VERSION.jar"
+          [ -f "$jar" ] || { echo "NG: $jar が無い" >&2; exit 1; }
+          (cd build/libs && sha256sum "$(basename "$jar")" > "$(basename "$jar").sha256")
+          digest=$(cut -d' ' -f1 "$jar.sha256")
+          {
+            echo "commit: $GITHUB_SHA"
+            echo
+            echo "sha256(\`$(basename "$jar")\`): \`$digest\`"
+          } > notes.md
+          gh release create "$TAG" "$jar" "$jar.sha256" --title "$TAG" --notes-file notes.md --verify-tag
+          echo "sha256: $digest"

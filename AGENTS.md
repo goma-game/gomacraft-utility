@@ -6,7 +6,7 @@
 
 - gomacraft(ATM10)のための自作のユーティリティ Mod(id は `gomacraft_utility`)を作るところまでを持つ(build・試験・GitHub Release への jar の配置)。サーバとクライアントへ配るのは gomabase(台帳に release を宣言する側)。
 - 計画・配り方・機能の順番の決定と経緯は goma-org/gomabase#2295 が正。設計と違うことをしたくなったら、実装せずにそこへ提案する。
-- Minecraft・NeoForge・JDK の版は gomacraft に合わせる。版の正は gomabase の宣言(ここに数字を写さない)。
+- Minecraft・NeoForge・JDK の版は gomacraft に合わせる。Minecraft の版の正は gomabase の宣言、NeoForge の版はパック(ATM10)が決める(gomabase は宣言しない)。組み立てに使う版は `gradle.properties` の 1 か所に置き、上げるときはサーバが実際に積む版を見てから上げる(ここに数字を写さない)。
 
 ## 作りの原則(goma-org/gomabase#2295 の決定)
 
@@ -33,3 +33,9 @@
   - 新しい clone では `git config core.hooksPath .githooks` が要る。
 - `.claude/settings.json` と `.claude/hooks/cloud-session-start.sh` は、ほかの作業リポジトリと同じ中身で置く(揃いは GitHome の検査が見る。ここだけ直さない)。
 - 検査の正は CI(流れの正は GitHome の `AGENTS.md`「仕事の進め方」)。手元では変更したところの速い検査だけ回す。
+  - CI(`.github/workflows/build.yml`)は、組み立てと JUnit・配る jar の中身・起動の自己検査(gametest のサーバ)を回す。何を確かめるかの正は `.github/scripts/check-build.sh`。
+  - 起動の自己検査は、わざと壊した機能 `selftest_broken`(自己検査のときだけ一覧に入る)の mixin が当て損ねても、その機能だけが FAILED になって起動が続くことを見る。機能の枠(`gomacraft.utility.feature`・`mixinsupport`)を変えたら、ここが落ちないことを確かめる。
+  - 手元に JDK 21 が無ければ、Docker の `gradle:<版>-jdk21` の箱で `./gradlew build runGameTestServer` を回す(手元の JDK は 21 と限らない)。
+- 機能の足し方: `Feature` を実装して `Features.catalog` に足し、mixin は `gomacraft.utility.mixin.<機能の名前>` の包みに置いて `gomacraft_utility.mixins.json` に並べる。通信を足すときは payload を全部 `optional()` にする。
+- 起動時の状態の 1 行の形(`StatusLine`)は gomabase の起動の検証との約束。変えるときは gomabase の読み手(`tools/mc-client-boot.py`・`tools/scan-server-logs.py`)と同時に変える(見本の文字列を両方の試験に置いてある)。
+- release: `gradle.properties` の `mod_version` を上げた PR をマージしてから、main の commit に `v<mod_version>` の tag を押す。release の workflow が検査を回し、jar と sha256 を GitHub Release に置く(同じ tag の作り直しはしない —— gomabase が sha256 をピンする)。

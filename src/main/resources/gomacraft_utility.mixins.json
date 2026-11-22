@@ -1,0 +1,15 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "gomacraft.utility.mixin",
+  "plugin": "gomacraft.utility.mixinsupport.GomacraftMixinPlugin",
+  "compatibilityLevel": "JAVA_21",
+  "mixins": [
+    "selftest_broken.SelftestBrokenMixin"
+  ],
+  "client": [],
+  "server": [],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}
