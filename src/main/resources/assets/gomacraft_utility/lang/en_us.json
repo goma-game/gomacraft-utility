@@ -5,7 +5,7 @@
   "gomacraft_utility.ae_quick_craft.not_an_item": "%s cannot be moved to your inventory and has no pattern",
   "gomacraft_utility.ae_grid_craft.timeout": "Filled the crafting grid, but %s did not appear (the materials stay in the grid)",
   "key.gomacraft_utility.ae2_fill_search": "Send hovered item to AE2 terminal search",
-  "gomacraft_utility.search_history.hint": "Left: search / Right: delete / Shift+Left or Middle: favorite",
+  "gomacraft_utility.search_history.hint": "Left: search / Right: delete / Shift+Left or Middle: favorite / Wheel: older",
   "gomacraft_utility.screenshot.button": "[Post to Discord]",
   "gomacraft_utility.screenshot.button.hover": "Post this screenshot to Discord under your name. Hold %s to choose the channel. Chat and player names in it are posted as they are (F1 hides the HUD).",
   "gomacraft_utility.screenshot.choose.title": "Where to post this screenshot?",

@@ -29,25 +29,32 @@ public final class FeatureConfig {
 
     /** 機能の名前 → 書かれていた値(true / false 以外も、そのまま持つ)。 */
     private final Map<String, String> values;
+    /** {@code [settings]} の、機能の中の細かい設定(件数など)の名前 → 書かれていた値。 */
+    private final Map<String, String> settings;
     private final boolean unreadable;
 
-    private FeatureConfig(Map<String, String> values, boolean unreadable) {
+    private FeatureConfig(Map<String, String> values, Map<String, String> settings, boolean unreadable) {
         this.values = values;
+        this.settings = settings;
         this.unreadable = unreadable;
     }
 
     public static FeatureConfig empty() {
-        return new FeatureConfig(Map.of(), false);
+        return new FeatureConfig(Map.of(), Map.of(), false);
     }
 
     /** 設定のファイルを読めなかった(全部の機能を切る)。 */
     public static FeatureConfig unreadable() {
-        return new FeatureConfig(Map.of(), true);
+        return new FeatureConfig(Map.of(), Map.of(), true);
     }
 
-    /** 設定の中身を読む。{@code [features]} の外と、知らない形の行は無視する。 */
+    /**
+     * 設定の中身を読む。{@code [features]}(機能の入り切り)と {@code [settings]}(機能の中の細かい設定)の外と、
+     * 知らない形の行は無視する。
+     */
     public static FeatureConfig parse(String text) {
         Map<String, String> values = new LinkedHashMap<>();
+        Map<String, String> settings = new LinkedHashMap<>();
         String section = "";
         for (String raw : text.split("\\R")) {
             String line = raw.strip();
@@ -59,15 +66,25 @@ public final class FeatureConfig {
                 section = sec.group(1);
                 continue;
             }
-            if (!section.equals("features")) {
+            Map<String, String> target = switch (section) {
+                case "features" -> values;
+                case "settings" -> settings;
+                default -> null;
+            };
+            if (target == null) {
                 continue;
             }
             Matcher entry = ENTRY.matcher(line);
             if (entry.matches()) {
-                values.put(entry.group(1), entry.group(2));
+                target.put(entry.group(1), entry.group(2));
             }
         }
-        return new FeatureConfig(values, false);
+        return new FeatureConfig(values, settings, false);
+    }
+
+    /** {@code [settings]} に書かれた値(書かれていない・設定のファイルを読めないなら空。値の読み方は使う側が決める)。 */
+    public Optional<String> setting(String key) {
+        return unreadable ? Optional.empty() : Optional.ofNullable(settings.get(key));
     }
 
     /**
@@ -92,6 +109,15 @@ public final class FeatureConfig {
         sb.append("[features]\n");
         for (Feature f : features) {
             sb.append(f.id()).append(" = ").append(f.enabledByDefault()).append('\n');
+        }
+        List<Setting> all = features.stream().flatMap(f -> f.settings().stream()).toList();
+        if (!all.isEmpty()) {
+            sb.append("\n# 機能の中の細かい設定。書いていない・読めない値は既定の値を使う。\n");
+            sb.append("[settings]\n");
+            for (Setting s : all) {
+                sb.append("# ").append(s.comment()).append('\n');
+                sb.append(s.key()).append(" = ").append(s.defaultValue()).append('\n');
+            }
         }
         return sb.toString();
     }

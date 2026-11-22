@@ -15,6 +15,10 @@ final class EmiBridge {
         return EmiApi.isSearchFocused();
     }
 
+    static String getSearchText() {
+        return EmiApi.getSearchText();
+    }
+
     static void setSearchText(String text) {
         EmiApi.setSearchText(text);
     }
