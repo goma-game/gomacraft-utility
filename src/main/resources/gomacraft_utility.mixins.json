@@ -29,7 +29,9 @@
     "ae2_tooltip_search_cache.RepoSearchMixin",
     "ae2_tooltip_search_cache.MEStorageScreenRepoAccessor",
     "ttf_glyph_lock.TrueTypeGlyphProviderLockMixin",
-    "ttf_glyph_lock.NativeImageFontLockMixin"
+    "ttf_glyph_lock.NativeImageFontLockMixin",
+    "ae2_repo_sort_cache.RepoSortCacheMixin",
+    "ae2_repo_update_batch.RepoUpdateBatchMixin"
   ],
   "server": [
     "mekagun_server.ItemMekaGunMixin"
