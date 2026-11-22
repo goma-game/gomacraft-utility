@@ -20,15 +20,17 @@ public final class ScreenshotPayloads {
 
     /**
      * 1 個の切れ端。{@code upload} は送りの番号(送る側が決める)、{@code total} は 1 枚の全体の大きさ
-     * (どの切れ端でも同じ値)、{@code index} は 0 から順の番号。
+     * (どの切れ端でも同じ値)、{@code index} は 0 から順の番号、{@code target} は行き先の種類
+     * ({@link ScreenshotRules.Target} の番号。どの切れ端でも同じ値 —— チャンネルの ID は送らない)。
      */
-    public record Chunk(int upload, int total, int index, byte[] data) implements CustomPacketPayload {
+    public record Chunk(int upload, int total, int index, int target, byte[] data) implements CustomPacketPayload {
         public static final Type<Chunk> TYPE =
                 new Type<>(ResourceLocation.fromNamespaceAndPath(GomacraftUtility.MOD_ID, "screenshot_chunk"));
         public static final StreamCodec<ByteBuf, Chunk> CODEC = StreamCodec.composite(
                 ByteBufCodecs.VAR_INT, Chunk::upload,
                 ByteBufCodecs.VAR_INT, Chunk::total,
                 ByteBufCodecs.VAR_INT, Chunk::index,
+                ByteBufCodecs.VAR_INT, Chunk::target,
                 ByteBufCodecs.byteArray(ScreenshotRules.CHUNK_BYTES), Chunk::data,
                 Chunk::new);
 

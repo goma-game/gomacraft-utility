@@ -36,9 +36,9 @@ class InboxStateTest {
     void assemblesChunksInOrder() {
         InboxState state = new InboxState();
         byte[] data = png(ScreenshotRules.CHUNK_BYTES * 2 + 10);
-        assertNull(state.accept(A, 7, data.length, 0, piece(data, 0), 0, false).result());
-        assertNull(state.accept(A, 7, data.length, 1, piece(data, 1), 0, false).done());
-        InboxState.Step last = state.accept(A, 7, data.length, 2, piece(data, 2), 0, false);
+        assertNull(state.accept(A, 7, data.length, 0, 0, piece(data, 0), 0, false).result());
+        assertNull(state.accept(A, 7, data.length, 1, 0, piece(data, 1), 0, false).done());
+        InboxState.Step last = state.accept(A, 7, data.length, 2, 0, piece(data, 2), 0, false);
         assertNull(last.result());
         assertArrayEquals(data, last.done());
     }
@@ -47,18 +47,18 @@ class InboxStateTest {
     void dropsAnUploadWhoseChunksAreOutOfOrderOrMisSized() {
         InboxState state = new InboxState();
         byte[] data = png(ScreenshotRules.CHUNK_BYTES * 3);
-        state.accept(A, 1, data.length, 0, piece(data, 0), 0, false);
-        assertEquals(Result.BROKEN, state.accept(A, 1, data.length, 2, piece(data, 2), 0, false).result());
+        state.accept(A, 1, data.length, 0, 0, piece(data, 0), 0, false);
+        assertEquals(Result.BROKEN, state.accept(A, 1, data.length, 2, 0, piece(data, 2), 0, false).result());
         // 捨てた送りの残りは黙って捨てる
-        InboxState.Step quiet = state.accept(A, 1, data.length, 1, piece(data, 1), 0, false);
+        InboxState.Step quiet = state.accept(A, 1, data.length, 1, 0, piece(data, 1), 0, false);
         assertNull(quiet.result());
         assertNull(quiet.done());
 
         InboxState other = new InboxState();
-        other.accept(B, 1, data.length, 0, piece(data, 0), 0, false);
-        assertEquals(Result.BROKEN, other.accept(B, 1, data.length + 1, 1, piece(data, 1), 0, false).result());
-        other.accept(C, 2, data.length, 0, piece(data, 0), 0, false);
-        assertEquals(Result.BROKEN, other.accept(C, 2, data.length, 1, new byte[5], 0, false).result());
+        other.accept(B, 1, data.length, 0, 0, piece(data, 0), 0, false);
+        assertEquals(Result.BROKEN, other.accept(B, 1, data.length + 1, 1, 0, piece(data, 1), 0, false).result());
+        other.accept(C, 2, data.length, 0, 0, piece(data, 0), 0, false);
+        assertEquals(Result.BROKEN, other.accept(C, 2, data.length, 1, 0, new byte[5], 0, false).result());
     }
 
     @Test
@@ -66,29 +66,29 @@ class InboxStateTest {
         InboxState state = new InboxState();
         byte[] head = piece(png(ScreenshotRules.CHUNK_BYTES), 0);
         assertEquals(Result.TOO_LARGE,
-                state.accept(A, 1, ScreenshotRules.MAX_BYTES + 1, 0, head, 0, false).result());
-        assertEquals(Result.TOO_LARGE, state.accept(A, 1, 0, 0, head, 0, false).result());
+                state.accept(A, 1, ScreenshotRules.MAX_BYTES + 1, 0, 0, head, 0, false).result());
+        assertEquals(Result.TOO_LARGE, state.accept(A, 1, 0, 0, 0, head, 0, false).result());
         assertEquals(Result.BAD_IMAGE,
-                state.accept(A, 1, head.length, 0, new byte[head.length], 0, false).result());
-        assertEquals(Result.SPOOL_FULL, state.accept(A, 1, head.length, 0, head, 0, true).result());
+                state.accept(A, 1, head.length, 0, 0, new byte[head.length], 0, false).result());
+        assertEquals(Result.SPOOL_FULL, state.accept(A, 1, head.length, 0, 0, head, 0, true).result());
     }
 
     @Test
     void onePerPlayerACooldownAndAServerWideLimit() {
         InboxState state = new InboxState();
         byte[] data = png(ScreenshotRules.CHUNK_BYTES * 2);
-        state.accept(A, 1, data.length, 0, piece(data, 0), 0, false);
-        assertEquals(Result.BUSY, state.accept(A, 2, data.length, 0, piece(data, 0), 0, false).result());
-        state.accept(B, 1, data.length, 0, piece(data, 0), 0, false);
+        state.accept(A, 1, data.length, 0, 0, piece(data, 0), 0, false);
+        assertEquals(Result.BUSY, state.accept(A, 2, data.length, 0, 0, piece(data, 0), 0, false).result());
+        state.accept(B, 1, data.length, 0, 0, piece(data, 0), 0, false);
         // 全体で 2 本まで
-        assertEquals(Result.BUSY, state.accept(C, 1, data.length, 0, piece(data, 0), 0, false).result());
-        assertNotNull(state.accept(A, 1, data.length, 1, piece(data, 1), 10, false).done());
+        assertEquals(Result.BUSY, state.accept(C, 1, data.length, 0, 0, piece(data, 0), 0, false).result());
+        assertNotNull(state.accept(A, 1, data.length, 1, 0, piece(data, 1), 10, false).done());
         // 書いている間も数える
-        assertEquals(Result.BUSY, state.accept(C, 1, data.length, 0, piece(data, 0), 10, false).result());
+        assertEquals(Result.BUSY, state.accept(C, 1, data.length, 0, 0, piece(data, 0), 10, false).result());
         state.written();
         // A は始めてから 30 秒は次を始められない
-        assertEquals(Result.COOLDOWN, state.accept(A, 3, data.length, 0, piece(data, 0), 20, false).result());
-        assertNull(state.accept(A, 3, data.length, 0, piece(data, 0),
+        assertEquals(Result.COOLDOWN, state.accept(A, 3, data.length, 0, 0, piece(data, 0), 20, false).result());
+        assertNull(state.accept(A, 3, data.length, 0, 0, piece(data, 0),
                 ScreenshotRules.COOLDOWN_MILLIS + 1, false).result());
     }
 
@@ -96,12 +96,34 @@ class InboxStateTest {
     void abandonedUploadsAreDroppedAfterTheTimeout() {
         InboxState state = new InboxState();
         byte[] data = png(ScreenshotRules.CHUNK_BYTES * 2);
-        state.accept(A, 1, data.length, 0, piece(data, 0), 0, false);
-        assertEquals(0, state.prune(ScreenshotRules.TIMEOUT_MILLIS));
-        assertEquals(1, state.prune(ScreenshotRules.TIMEOUT_MILLIS + 1));
+        state.accept(A, 1, data.length, 0, 0, piece(data, 0), 0, false);
+        // 届いている間は捨てない(最後の切れ端から数える)
+        byte[] big = png(ScreenshotRules.CHUNK_BYTES * 3);
+        InboxState slow = new InboxState();
+        slow.accept(C, 9, big.length, 0, 0, piece(big, 0), 0, false);
+        slow.accept(C, 9, big.length, 1, 0, piece(big, 1), ScreenshotRules.TIMEOUT_MILLIS, false);
+        assertEquals(0, slow.prune(ScreenshotRules.TIMEOUT_MILLIS + 1).size());
+        assertEquals(0, state.prune(ScreenshotRules.TIMEOUT_MILLIS).size());
+        assertEquals(java.util.List.of(new InboxState.Dropped(A, 1)),
+                state.prune(ScreenshotRules.TIMEOUT_MILLIS + 1));
         assertEquals(0, state.inFlight());
-        state.accept(B, 1, data.length, 0, piece(data, 0), 0, false);
+        state.accept(B, 1, data.length, 0, 0, piece(data, 0), 0, false);
         state.forget(B);
         assertEquals(0, state.inFlight());
+    }
+
+    @Test
+    void carriesTheTargetAndRefusesUnknownOrChangedOnes() {
+        byte[] data = png(ScreenshotRules.CHUNK_BYTES + 10);
+        InboxState state = new InboxState();
+        int both = ScreenshotRules.Target.BOTH.ordinal();
+        state.accept(A, 1, data.length, 0, both, piece(data, 0), 0, false);
+        InboxState.Step done = state.accept(A, 1, data.length, 1, both, piece(data, 1), 0, false);
+        assertEquals(ScreenshotRules.Target.BOTH, done.target());
+
+        assertEquals(Result.BROKEN, new InboxState().accept(B, 1, data.length, 0, 7, piece(data, 0), 0, false).result());
+        InboxState changed = new InboxState();
+        changed.accept(C, 1, data.length, 0, 0, piece(data, 0), 0, false);
+        assertEquals(Result.BROKEN, changed.accept(C, 1, data.length, 1, 1, piece(data, 1), 0, false).result());
     }
 }

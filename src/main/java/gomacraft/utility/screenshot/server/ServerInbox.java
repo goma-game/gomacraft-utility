@@ -44,7 +44,14 @@ public final class ServerInbox {
     public static void init() {
         NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class, event -> {
             if (event.getServer().getTickCount() % 20 == 0) {
-                Features.guard(ScreenshotFeatures.INBOX, () -> STATE.prune(System.currentTimeMillis()));
+                Features.guard(ScreenshotFeatures.INBOX, () -> {
+                    for (InboxState.Dropped d : STATE.prune(System.currentTimeMillis())) {
+                        ServerPlayer player = event.getServer().getPlayerList().getPlayer(d.player());
+                        if (player != null) {
+                            reply(player, d.upload(), Result.BROKEN);
+                        }
+                    }
+                });
             }
         });
         NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedOutEvent.class,
@@ -82,17 +89,17 @@ public final class ServerInbox {
             }
         }
         InboxState.Step step = STATE.accept(player.getUUID(), chunk.upload(), chunk.total(), chunk.index(),
-                chunk.data(), System.currentTimeMillis(), spoolFull);
+                chunk.target(), chunk.data(), System.currentTimeMillis(), spoolFull);
         if (step.result() != null) {
             reply(player, chunk.upload(), step.result());
         }
         if (step.done() != null) {
-            store(player, chunk.upload(), step.done());
+            store(player, chunk.upload(), step.done(), step.target());
         }
     }
 
     /** 揃った 1 枚を、主スレッドの外で確かめて書く。結果は主スレッドへ戻して返す。 */
-    private static void store(ServerPlayer player, int upload, byte[] image) {
+    private static void store(ServerPlayer player, int upload, byte[] image, ScreenshotRules.Target target) {
         MinecraftServer server = player.server;
         // 名前と誰かは接続から決める(payload の中の値は使わない)
         String name = player.getGameProfile().getName();
@@ -105,7 +112,7 @@ public final class ServerInbox {
             } else {
                 try {
                     ScreenshotRules.Format format = ScreenshotRules.sniff(image).orElseThrow();
-                    Spool.write(spool(), image, format, name, id, Instant.now(), RANDOM.nextInt());
+                    Spool.write(spool(), image, format, target, name, id, Instant.now(), RANDOM.nextInt());
                     result = Result.ACCEPTED;
                 } catch (Exception e) {
                     LOGGER.warn("gomacraft_utility: スクショを書けない: {}", FeatureRegistry.describe(e));

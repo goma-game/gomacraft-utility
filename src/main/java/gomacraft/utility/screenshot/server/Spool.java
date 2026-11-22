@@ -44,8 +44,9 @@ public final class Spool {
     }
 
     /** 1 枚を書く(一時ファイル → rename、画像 → メタの順)。置いた名前(拡張子の前)を返す。 */
-    public static String write(Path dir, byte[] image, ScreenshotRules.Format format, String playerName,
-            UUID playerId, Instant now, int random) throws IOException {
+    public static String write(Path dir, byte[] image, ScreenshotRules.Format format,
+            ScreenshotRules.Target target, String playerName, UUID playerId, Instant now, int random)
+            throws IOException {
         Files.createDirectories(dir);
         String stem = ScreenshotRules.stem(now, playerId, random);
         JsonObject meta = new JsonObject();
@@ -53,6 +54,8 @@ public final class Spool {
         meta.addProperty("uuid", playerId.toString());
         meta.addProperty("taken_at", now.toString());
         meta.addProperty("format", format.extension);
+        // 行き先の種類だけ(チャンネルの ID は Bot が宣言から引く)
+        meta.addProperty("target", target.key());
         place(dir, stem + "." + format.extension, image);
         place(dir, stem + ".json", meta.toString().getBytes(StandardCharsets.UTF_8));
         return stem;

@@ -168,6 +168,41 @@ public final class ScreenshotRules {
         return STAMP.format(now) + "-" + who + "-" + HexFormat.of().toHexDigits(random);
     }
 
+    /**
+     * 行き先の種類(本人が選ぶ)。⚠ チャンネルの ID は持たない —— サーバの外の Bot が宣言から引く
+     * (クライアントから任意のチャンネルへ投稿できない形を保つ)。番号は通信の約束、名前はメタの約束
+     * (gomabase の helper と gomacraft-manager が同じ 3 つだけを受ける)。並びを変えない。
+     */
+    public enum Target {
+        /** そのサーバのチャットブリッジのチャンネル。 */
+        CHAT,
+        /** スクショのチャンネル。 */
+        SCREENSHOT,
+        /** 両方。 */
+        BOTH;
+
+        /** 知らない番号は空(受けない)。 */
+        public static Optional<Target> of(int ordinal) {
+            Target[] all = values();
+            return ordinal >= 0 && ordinal < all.length ? Optional.of(all[ordinal]) : Optional.empty();
+        }
+
+        /** 設定・メタでの名前。 */
+        public String key() {
+            return name().toLowerCase(Locale.ROOT);
+        }
+
+        /** 設定の値から(知らない値は空)。 */
+        public static Optional<Target> parse(String value) {
+            for (Target t : values()) {
+                if (t.key().equals(value)) {
+                    return Optional.of(t);
+                }
+            }
+            return Optional.empty();
+        }
+    }
+
     /** 送りの結果(サーバ → クライアントの返事)。番号は通信の約束なので並びを変えない。 */
     public enum Result {
         ACCEPTED,

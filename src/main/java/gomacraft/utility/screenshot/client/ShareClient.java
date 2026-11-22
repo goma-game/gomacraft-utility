@@ -5,6 +5,8 @@ import gomacraft.utility.Features;
 import gomacraft.utility.screenshot.ScreenshotFeatures;
 import gomacraft.utility.screenshot.ScreenshotRules;
 import gomacraft.utility.screenshot.ScreenshotRules.Result;
+import gomacraft.utility.screenshot.ScreenshotRules.Target;
+import gomacraft.utility.screenshot.ShareSettings;
 import gomacraft.utility.screenshot.net.ScreenshotPayloads;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
@@ -26,6 +28,7 @@ import javax.imageio.stream.ImageOutputStream;
 import net.minecraft.ChatFormatting;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.ClickEvent;
@@ -33,11 +36,14 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 import net.minecraft.network.chat.MutableComponent;
 import net.neoforged.bus.api.EventPriority;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RegisterClientCommandsEvent;
 import net.neoforged.neoforge.client.event.ScreenshotEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.PacketDistributor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * クライアントの側: 撮ったときのチャット欄の行に「投稿」の文字を足し、押された 1 枚だけをサーバへ送る。
@@ -51,10 +57,14 @@ public final class ShareClient {
     static final String COMMAND = "gomacraft_utility_screenshot";
     /** 札の数の上限(古いものから忘れる)。 */
     private static final int MAX_TOKENS = 32;
-    /** 1 tick に送る切れ端の数(接続を詰まらせない)。 */
-    private static final int CHUNKS_PER_TICK = 4;
+    /**
+     * 切れ端を送る間(tick)。2 tick に 1 個(30,000 バイト)で約 300 KB/s。遅い回線でも keepalive を
+     * 詰まらせないように絞る(8 MiB でも約 30 秒 —— サーバは最後の切れ端から 60 秒届かなければ捨てる)。
+     */
+    private static final int TICKS_PER_CHUNK = 2;
 
     private static final SecureRandom RANDOM = new SecureRandom();
+    private static final Logger LOGGER = LoggerFactory.getLogger(gomacraft.utility.GomacraftUtility.MOD_ID);
     private static final Map<String, Path> TOKENS = new LinkedHashMap<>() {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, Path> eldest) {
@@ -66,14 +76,28 @@ public final class ShareClient {
     private static Sending sending;
     /** 画像を読んでいる途中か(主スレッドだけが触る)。 */
     private static boolean loading;
+    /** 送り終えて返事を待っている送り → 札(主スレッドだけが触る)。 */
+    private static final Map<Integer, String> AWAITING = new LinkedHashMap<>();
+    private static int tickCounter;
 
-    private record Sending(int upload, byte[] data, int next) {
+    /** 各自の手元の設定(普通に押したときの行き先・選ぶ画面を出す修飾キー)。 */
+    private static ShareSettings settings = ShareSettings.defaults();
+
+    private record Sending(int upload, byte[] data, int next, String token, Target target) {
     }
 
     private ShareClient() {
     }
 
     public static void init() {
+        try {
+            settings = ShareSettings.load(FMLPaths.CONFIGDIR.get());
+        } catch (IOException e) {
+            LOGGER.warn("gomacraft_utility: スクショの投稿の設定を読めないので既定の値を使う: {}", e.toString());
+        }
+        for (String problem : settings.problems()) {
+            LOGGER.warn("gomacraft_utility: スクショの投稿の設定({}): {}", ShareSettings.FILE_NAME, problem);
+        }
         // ほかの Mod がファイルを差し替えた後の名前を使うため、いちばん後に聞く
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ScreenshotEvent.class,
                 event -> Features.guard(ScreenshotFeatures.SHARE, () -> onScreenshot(event)));
@@ -113,8 +137,8 @@ public final class ShareClient {
 
     private static Component button(String token) {
         Component hover = Component.translatableWithFallback("gomacraft_utility.screenshot.button.hover",
-                "Post this screenshot to the server's Discord channel. Chat and player names in it are posted as"
-                        + " they are (F1 hides the HUD).");
+                "Post this screenshot to Discord under your name. Hold Ctrl (configurable) to choose the channel."
+                        + " Chat and player names in it are posted as they are (F1 hides the HUD).");
         return Component.translatableWithFallback("gomacraft_utility.screenshot.button", "[Post to Discord]")
                 .withStyle(s -> s.withColor(ChatFormatting.AQUA)
                         .withClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/" + COMMAND + " " + token))
@@ -126,19 +150,39 @@ public final class ShareClient {
                 .then(Commands.argument("token", StringArgumentType.word())
                         .executes(context -> {
                             String token = StringArgumentType.getString(context, "token");
-                            Features.guard(ScreenshotFeatures.SHARE, () -> post(token));
+                            Features.guard(ScreenshotFeatures.SHARE, () -> choose(token));
                             return 1;
                         })));
     }
 
-    private static void post(String token) {
-        Path file = TOKENS.remove(token);
+    /** 修飾キーを押しながらなら行き先を選ぶ画面を出し、そうでなければ設定の既定の行き先へ送る。 */
+    private static void choose(String token) {
+        if (!modifierDown()) {
+            post(token, settings.defaultTarget());
+            return;
+        }
+        Minecraft mc = Minecraft.getInstance();
+        // チャット欄のクリックの処理が終わってから開く(チャット欄が閉じる順と重ねない)
+        mc.execute(() -> Features.guard(ScreenshotFeatures.SHARE, () -> mc.setScreen(new TargetScreen(
+                target -> Features.guard(ScreenshotFeatures.SHARE, () -> post(token, target))))));
+    }
+
+    private static boolean modifierDown() {
+        return switch (settings.chooserModifier()) {
+            case CTRL -> Screen.hasControlDown();
+            case SHIFT -> Screen.hasShiftDown();
+            case ALT -> Screen.hasAltDown();
+        };
+    }
+
+    private static void post(String token, Target target) {
+        // ⚠ 札は受け付けられる(ACCEPTED)まで残す(COOLDOWN・BUSY・BROKEN のあとで押し直せるように)
+        Path file = TOKENS.get(token);
         if (file == null) {
             say("gomacraft_utility.screenshot.expired", "This screenshot can no longer be posted.");
             return;
         }
-        if (sending != null || loading) {
-            TOKENS.put(token, file);
+        if (sending != null || loading || AWAITING.containsValue(token)) {
             say("gomacraft_utility.screenshot.busy", "Another screenshot is still being sent. Try again shortly.");
             return;
         }
@@ -160,7 +204,7 @@ public final class ShareClient {
                         say("gomacraft_utility.screenshot.unavailable", "This server does not accept screenshots.");
                         return;
                     }
-                    sending = new Sending(RANDOM.nextInt(Integer.MAX_VALUE), data.get(), 0);
+                    sending = new Sending(RANDOM.nextInt(Integer.MAX_VALUE), data.get(), 0, token, target);
                     say("gomacraft_utility.screenshot.sending", "Sending the screenshot...");
                 })));
     }
@@ -206,6 +250,10 @@ public final class ShareClient {
     }
 
     private static void tick() {
+        if (Minecraft.getInstance().getConnection() == null) {
+            // 抜けたら返事は来ない(待ちを残すと、その札が「送っている」のまま押せなくなる)
+            AWAITING.clear();
+        }
         Sending current = sending;
         if (current == null) {
             return;
@@ -214,23 +262,39 @@ public final class ShareClient {
             sending = null;
             return;
         }
+        if (++tickCounter % TICKS_PER_CHUNK != 0) {
+            return;
+        }
         int total = current.data().length;
         int count = ScreenshotRules.chunkCount(total);
         int next = current.next();
-        for (int sent = 0; sent < CHUNKS_PER_TICK && next < count; sent++, next++) {
-            int from = next * ScreenshotRules.CHUNK_BYTES;
-            byte[] piece = java.util.Arrays.copyOfRange(current.data(), from,
-                    from + ScreenshotRules.chunkLength(total, next));
-            PacketDistributor.sendToServer(new ScreenshotPayloads.Chunk(current.upload(), total, next, piece));
+        int from = next * ScreenshotRules.CHUNK_BYTES;
+        byte[] piece = java.util.Arrays.copyOfRange(current.data(), from,
+                from + ScreenshotRules.chunkLength(total, next));
+        PacketDistributor.sendToServer(new ScreenshotPayloads.Chunk(current.upload(), total, next,
+                current.target().ordinal(), piece));
+        next++;
+        if (next < count) {
+            sending = new Sending(current.upload(), current.data(), next, current.token(), current.target());
+        } else {
+            sending = null;
+            AWAITING.put(current.upload(), current.token());
         }
-        sending = next < count ? new Sending(current.upload(), current.data(), next) : null;
     }
 
     /** サーバの返事。 */
     public static void onOutcome(ScreenshotPayloads.Outcome outcome) {
         Result result = Result.of(outcome.result());
-        if (result != Result.ACCEPTED && sending != null && sending.upload() == outcome.upload()) {
-            sending = null;
+        String token = AWAITING.remove(outcome.upload());
+        if (sending != null && sending.upload() == outcome.upload()) {
+            token = sending.token();
+            if (result != Result.ACCEPTED) {
+                sending = null;
+            }
+        }
+        if (result == Result.ACCEPTED && token != null) {
+            // 受け付けられた 1 枚はもう送らない(1 枚 1 回)
+            TOKENS.remove(token);
         }
         say(result.key(), fallback(result));
     }

@@ -15,13 +15,13 @@ import java.util.UUID;
  */
 public final class InboxState {
     /** 切れ端を受けた結果。{@code result} が空でなければ返事を出す。{@code done} は揃った 1 枚。 */
-    public record Step(Result result, byte[] done) {
+    public record Step(Result result, byte[] done, ScreenshotRules.Target target) {
         static Step reply(Result result) {
-            return new Step(result, null);
+            return new Step(result, null, null);
         }
 
         static Step quiet() {
-            return new Step(null, null);
+            return new Step(null, null, null);
         }
     }
 
@@ -29,14 +29,17 @@ public final class InboxState {
         final int id;
         final int total;
         final byte[] data;
-        final long started;
+        final int target;
+        /** 最後に切れ端を受けた時刻(止まった送りを捨てる目安)。 */
+        long last;
         int next;
 
-        Upload(int id, int total, long started) {
+        Upload(int id, int total, int target, long now) {
             this.id = id;
             this.total = total;
+            this.target = target;
             this.data = new byte[total];
-            this.started = started;
+            this.last = now;
         }
     }
 
@@ -50,7 +53,8 @@ public final class InboxState {
      *
      * @param spoolFull 置き場が上限に達しているか(最初の切れ端でだけ見る)
      */
-    public Step accept(UUID player, int upload, int total, int index, byte[] data, long now, boolean spoolFull) {
+    public Step accept(UUID player, int upload, int total, int index, int target, byte[] data, long now,
+            boolean spoolFull) {
         Upload current = uploads.get(player);
         if (index == 0) {
             if (current != null) {
@@ -63,6 +67,10 @@ public final class InboxState {
             if (uploads.size() + writing >= ScreenshotRules.MAX_IN_FLIGHT) {
                 return Step.reply(Result.BUSY);
             }
+            if (ScreenshotRules.Target.of(target).isEmpty()) {
+                // 知らない行き先は受けない(チャンネルを選ぶのはサーバの外の Bot の宣言だけ)
+                return Step.reply(Result.BROKEN);
+            }
             if (!ScreenshotRules.acceptableTotal(total)) {
                 return Step.reply(Result.TOO_LARGE);
             }
@@ -72,26 +80,27 @@ public final class InboxState {
             if (spoolFull) {
                 return Step.reply(Result.SPOOL_FULL);
             }
-            current = new Upload(upload, total, now);
+            current = new Upload(upload, total, target, now);
             uploads.put(player, current);
             lastStart.put(player, now);
         } else if (current == null || current.id != upload) {
             // 捨てた送りの残り・古い送りの切れ端(返事は出さない —— 同じ理由を何度も返さない)
             return Step.quiet();
         }
-        if (total != current.total || index != current.next
+        if (total != current.total || target != current.target || index != current.next
                 || data.length != ScreenshotRules.chunkLength(current.total, index)) {
             uploads.remove(player);
             return Step.reply(Result.BROKEN);
         }
         System.arraycopy(data, 0, current.data, index * ScreenshotRules.CHUNK_BYTES, data.length);
         current.next++;
+        current.last = now;
         if (current.next < ScreenshotRules.chunkCount(current.total)) {
             return Step.quiet();
         }
         uploads.remove(player);
         writing++;
-        return new Step(null, current.data);
+        return new Step(null, current.data, ScreenshotRules.Target.of(current.target).orElseThrow());
     }
 
     /** 揃った 1 枚を書き終えた(成否によらず呼ぶ)。 */
@@ -101,12 +110,25 @@ public final class InboxState {
         }
     }
 
-    /** 揃わないまま {@link ScreenshotRules#TIMEOUT_MILLIS} を過ぎた送りを捨てる。捨てた数を返す。 */
-    public int prune(long now) {
-        int before = uploads.size();
-        uploads.values().removeIf(u -> now - u.started > ScreenshotRules.TIMEOUT_MILLIS);
+    /** 捨てた送り(返事の宛先)。 */
+    public record Dropped(UUID player, int upload) {
+    }
+
+    /**
+     * 最後の切れ端から {@link ScreenshotRules#TIMEOUT_MILLIS} 届かない送りを捨てる。捨てた送りを返す
+     * (呼び手は BROKEN を返す —— 送る側が待ち続けないように)。
+     */
+    public java.util.List<Dropped> prune(long now) {
+        java.util.List<Dropped> dropped = new java.util.ArrayList<>();
+        uploads.entrySet().removeIf(e -> {
+            if (now - e.getValue().last > ScreenshotRules.TIMEOUT_MILLIS) {
+                dropped.add(new Dropped(e.getKey(), e.getValue().id));
+                return true;
+            }
+            return false;
+        });
         lastStart.values().removeIf(t -> now - t > ScreenshotRules.COOLDOWN_MILLIS);
-        return before - uploads.size();
+        return dropped;
     }
 
     /** 抜けた人の途中の送りを捨てる。 */
