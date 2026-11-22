@@ -111,7 +111,29 @@ public final class ClientSettings {
     /** 節 → 名前 → 書かれた文字列(知らない項目も含めて、読んだまま持つ)。 */
     private final Map<String, Map<String, String>> raw = new LinkedHashMap<>();
     private final List<String> problems = new ArrayList<>();
+    private final List<Runnable> listeners = new ArrayList<>();
     private Path file;
+
+    /**
+     * 値が変わり得たとき(読んだ後・書き戻した後)に呼ぶもの。機能が値を自分の形へ写すのに使う。例外は飲まずに投げる
+     * (呼ぶ側の機能の守り {@code Features.guard} で包んで足す)。
+     */
+    public synchronized void onChange(Runnable listener) {
+        listeners.add(listener);
+    }
+
+    private void fire() {
+        List<Runnable> copy;
+        synchronized (this) {
+            copy = List.copyOf(listeners);
+        }
+        copy.forEach(Runnable::run);
+    }
+
+    /** ファイルに値が書かれているか(既定の値のままか、を見分ける —— 前の置き場からの移し替えに使う)。 */
+    public synchronized boolean isWritten(Setting<?> setting) {
+        return raw.getOrDefault(setting.feature(), Map.of()).containsKey(setting.key());
+    }
 
     /** 項目を宣言する(同じ機能・名前を 2 度宣言したら、前のものを置き換える)。 */
     public synchronized <T> Setting<T> register(Setting<T> setting) {
@@ -199,25 +221,35 @@ public final class ClientSettings {
     /** 設定のファイルを読む(無ければ既定の値で作る)。読めなければ既定の値のまま、理由を {@code warn} へ。 */
     public synchronized void load(Path configDir, Consumer<String> warn) {
         file = configDir.resolve(FILE_NAME);
+        boolean exists = Files.exists(file);
         try {
-            if (Files.exists(file)) {
+            if (exists) {
                 parse(Files.readString(file, StandardCharsets.UTF_8));
             } else {
                 raw.clear();
-                save();
             }
         } catch (IOException e) {
             warn.accept("gomacraft_utility: 手元の設定を読めない(既定の値を使う): " + e);
         }
         problems().forEach(p -> warn.accept("gomacraft_utility: " + p));
+        // 機能が値を写す(前の置き場からの移し替えもここ。既定の値でファイルを作るのはその後)
+        fire();
+        if (!exists) {
+            try {
+                save();
+            } catch (IOException e) {
+                warn.accept("gomacraft_utility: 手元の設定を書けない: " + e);
+            }
+        }
     }
 
-    /** 書き戻す({@link #load} の前は何もしない)。 */
+    /** 書き戻す({@link #load} の前は何もしない)。書いたら {@link #onChange} の listener を呼ぶ。 */
     public synchronized void save() throws IOException {
         if (file == null) {
             return;
         }
         Files.createDirectories(file.getParent());
         Files.writeString(file, render(), StandardCharsets.UTF_8);
+        fire();
     }
 }

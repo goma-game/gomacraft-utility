@@ -1,6 +1,7 @@
 package gomacraft.utility.screenshot;
 
 import gomacraft.utility.screenshot.ScreenshotRules.Target;
+import gomacraft.utility.settings.ClientSettings;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -93,6 +94,33 @@ public record ShareSettings(Target defaultTarget, Modifier chooserModifier, List
             }
         }
         return new ShareSettings(target, modifier, List.copyOf(problems));
+    }
+
+    /** 手元の設定({@code gomacraft_utility-client.toml} の {@code [screenshot_share]})の項目。設定の画面にも並ぶ。 */
+    public static final ClientSettings.Choice DEFAULT_TARGET = new ClientSettings.Choice(
+            ScreenshotFeatures.SHARE, "default_target", "chat", List.of("chat", "screenshot", "both"));
+    public static final ClientSettings.Choice CHOOSER_MODIFIER = new ClientSettings.Choice(
+            ScreenshotFeatures.SHARE, "chooser_modifier", "ctrl", List.of("ctrl", "alt"));
+
+    /** 手元の設定の今の値から作る(値は Choice が取りうる語に限られている)。 */
+    public static ShareSettings from(ClientSettings settings) {
+        return parse("default_target = \"" + settings.get(DEFAULT_TARGET) + "\"\n"
+                + "chooser_modifier = \"" + settings.get(CHOOSER_MODIFIER) + "\"\n");
+    }
+
+    /**
+     * 前の置き場({@link #FILE_NAME})から、手元の設定へ一度だけ移す(手元の設定にまだどちらの値も書かれていないときだけ)。
+     * 前のファイルは消さない(前の版の Mod へ戻したときに読める)。移したら true(呼ぶ側が書き戻す)。
+     */
+    public static boolean migrateLegacy(ClientSettings settings, Path configDir) throws IOException {
+        Path file = configDir.resolve(FILE_NAME);
+        if (settings.isWritten(DEFAULT_TARGET) || settings.isWritten(CHOOSER_MODIFIER) || !Files.exists(file)) {
+            return false;
+        }
+        ShareSettings legacy = parse(Files.readString(file, StandardCharsets.UTF_8));
+        settings.set(DEFAULT_TARGET, legacy.defaultTarget().name().toLowerCase(Locale.ROOT));
+        settings.set(CHOOSER_MODIFIER, legacy.chooserModifier().key());
+        return true;
     }
 
     /** 読む。無ければ既定の値で作ってから読む(在るファイルは書き換えない)。 */

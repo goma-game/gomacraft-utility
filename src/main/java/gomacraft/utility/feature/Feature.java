@@ -31,6 +31,14 @@ public interface Feature {
     }
 
     /**
+     * 手元の設定の画面(Mod の一覧の「設定」)に、入り切りを出すか。既定は、専用サーバにだけ効く機能
+     * ({@link #serverOnly})でなければ出す。サーバの宣言(gomabase が配る設定)で決めるもの(受け口など)は false にする。
+     */
+    default boolean shownInClientSettings() {
+        return !serverOnly();
+    }
+
+    /**
      * 専用サーバにだけ効く機能か({@link #clientOnly} の対)。true ならクライアント(シングルプレイの内蔵サーバを含む)では
      * {@code off(server only)} にする(mixin を server の欄に置いても、クライアントの 1 行に {@code on} と出て、
      * 当たっていないのに効いて見えるのを避ける)。

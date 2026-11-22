@@ -8,6 +8,8 @@ import gomacraft.utility.screenshot.ScreenshotRules.Result;
 import gomacraft.utility.screenshot.ScreenshotRules.Target;
 import gomacraft.utility.screenshot.ShareSettings;
 import gomacraft.utility.screenshot.net.ScreenshotPayloads;
+import gomacraft.utility.settings.ClientSettings;
+import gomacraft.utility.settings.Settings;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -90,14 +92,21 @@ public final class ShareClient {
     }
 
     public static void init() {
-        try {
-            settings = ShareSettings.load(FMLPaths.CONFIGDIR.get());
-        } catch (IOException e) {
-            LOGGER.warn("gomacraft_utility: スクショの投稿の設定を読めないので既定の値を使う: {}", e.toString());
-        }
-        for (String problem : settings.problems()) {
-            LOGGER.warn("gomacraft_utility: スクショの投稿の設定({}): {}", ShareSettings.FILE_NAME, problem);
-        }
+        // 設定は手元の設定(gomacraft_utility-client.toml の [screenshot_share])に置く。設定の画面にも並ぶ。
+        // 前の置き場(gomacraft_utility-screenshot.toml)の値は、最初に読んだときに一度だけ移す
+        ClientSettings client = Settings.client();
+        client.register(ShareSettings.DEFAULT_TARGET);
+        client.register(ShareSettings.CHOOSER_MODIFIER);
+        client.onChange(() -> Features.guard(ScreenshotFeatures.SHARE, () -> {
+            try {
+                if (ShareSettings.migrateLegacy(client, FMLPaths.CONFIGDIR.get())) {
+                    client.save();
+                }
+            } catch (IOException e) {
+                LOGGER.warn("gomacraft_utility: 前のスクショの投稿の設定を移せない(既定の値を使う): {}", e.toString());
+            }
+            settings = ShareSettings.from(client);
+        }));
         // ほかの Mod がファイルを差し替えた後の名前を使うため、いちばん後に聞く
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ScreenshotEvent.class,
                 event -> Features.guard(ScreenshotFeatures.SHARE, () -> onScreenshot(event)));

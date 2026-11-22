@@ -7,6 +7,7 @@ import gomacraft.utility.settings.Settings;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 
@@ -18,12 +19,14 @@ import net.neoforged.fml.event.lifecycle.FMLLoadCompleteEvent;
 public final class GomacraftUtility {
     public static final String MOD_ID = "gomacraft_utility";
 
-    public GomacraftUtility(IEventBus modBus, Dist dist) {
+    public GomacraftUtility(IEventBus modBus, Dist dist, ModContainer container) {
         FeatureRegistry registry = Features.registry();
         registry.initFeatures(new FeatureContext(modBus, dist));
         // 手元の設定(機能が init で項目を宣言した後に読む。専用サーバは持たない)
         if (dist.isClient()) {
             Settings.client().load(FMLPaths.CONFIGDIR.get(), org.slf4j.LoggerFactory.getLogger(MOD_ID)::warn);
+            // Mod の一覧の「設定」から開く画面(クラスは画面の側だけで引く)
+            gomacraft.utility.settings.client.SettingsScreens.register(container);
         }
         // 全部の Mod の組み立てが済んだところで、当て先のクラスを読み込ませて(遅れて読まれるクラスの当て損ねも
         // ここで出す)、機能ごとの状態を 1 行出す(gomabase の起動の検証が読む)
