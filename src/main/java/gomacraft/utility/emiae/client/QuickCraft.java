@@ -26,10 +26,12 @@ import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * EMI の一覧の品を、AE の端末を開いたまま 1 回の操作で手元へ(既定は Alt + 左クリック。操作の設定で変えられる)。
+ * EMI の一覧の品を、AE の端末を開いたまま 1 回の操作で手元へ(既定は Alt + 左クリック。操作の設定で変えられ、
+ * キーボードのキーに割り当て直してもよい —— そのときは品の上でそのキーを押す)。
  *
  * <ul>
- *   <li>ネットワークに在れば、1 スタックを手持ちへ移す(AE2 の端末の Shift + クリックと同じ動き)。</li>
+ *   <li>ネットワークに品(アイテム)が在れば、1 スタックを手持ちへ移す(AE2 の端末の Shift + クリックと同じ動き)。
+ *       液体などは手持ちへ移せないので、作れるなら自動クラフトへ、作れなければ案内を出す。</li>
  *   <li>無くて作れるなら、AE2 の自動クラフトを依頼する。数の画面を飛ばして 1 個(Shift も押せば 1 スタック)を
  *       「すぐ始める」で確かめる。材料が足りなければ、AE2 のクラフト計画の画面が残る(そこで直せる)。</li>
  * </ul>
@@ -45,7 +47,14 @@ public final class QuickCraft {
     /** 依頼してから数の画面が開くまで待つ時間。 */
     private static final long PENDING_MS = 3000;
 
-    private record Pending(AEKey key, int amount, long deadline) {
+    /**
+     * 依頼の待ち。{@code screen} は、依頼の後に最初に見た数の画面(その画面の品が違えば、手で開いた別の画面なので諦める。
+     * 依頼の後に開いた画面だけを押す)。
+     */
+    private record Pending(AEKey key, int amount, long deadline, CraftAmountScreen screen) {
+        Pending seen(CraftAmountScreen s) {
+            return new Pending(key, amount, deadline, s);
+        }
     }
 
     private static Pending pending;
@@ -55,23 +64,33 @@ public final class QuickCraft {
 
     /** 機能の初期化(画面の側だけ)。 */
     public static void init(IEventBus modBus) {
-        modBus.addListener(RegisterKeyMappingsEvent.class, event -> event.register(KEY));
+        modBus.addListener(RegisterKeyMappingsEvent.class,
+                event -> Features.guard(EmiAeFeatures.QUICK_CRAFT, () -> event.register(KEY)));
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class,
                 event -> Features.guard(EmiAeFeatures.QUICK_CRAFT, QuickCraft::tick));
     }
 
-    /**
-     * EMI がクリックを扱う前に呼ばれる(mixin)。この操作で扱ったら true(EMI には渡さない)。
-     */
+    /** EMI がクリックを扱う前に呼ばれる(mixin)。この操作で扱ったら true(EMI には渡さない)。 */
     public static boolean onMouseClicked(double mouseX, double mouseY, int button) {
         if (!KEY.isActiveAndMatches(InputConstants.Type.MOUSE.getOrCreate(button))) {
             return false;
         }
+        return handle(EmiApi.getHoveredStack((int) mouseX, (int) mouseY, false));
+    }
+
+    /** EMI がキーを扱う前に呼ばれる(mixin)。キーボードに割り当て直したとき用。扱ったら true。 */
+    public static boolean onKeyPressed(int keyCode, int scanCode) {
+        if (!KEY.isActiveAndMatches(InputConstants.getKey(keyCode, scanCode))) {
+            return false;
+        }
+        return handle(EmiApi.getHoveredStack(false));
+    }
+
+    private static boolean handle(EmiStackInteraction hovered) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || !(mc.player.containerMenu instanceof MEStorageMenu menu)) {
             return false;
         }
-        EmiStackInteraction hovered = EmiApi.getHoveredStack((int) mouseX, (int) mouseY, false);
         if (hovered == null || hovered.isEmpty()) {
             return false;
         }
@@ -81,18 +100,23 @@ public final class QuickCraft {
             return false;
         }
         GridInventoryEntry entry = find(repo, key);
-        if (entry == null || (entry.getStoredAmount() <= 0 && !entry.isCraftable())) {
-            mc.player.displayClientMessage(
-                    Component.translatable("gomacraft_utility.ae_quick_craft.unavailable", key.getDisplayName()), true);
-            return true;
-        }
-        if (entry.getStoredAmount() > 0) {
+        boolean stored = entry != null && entry.getStoredAmount() > 0;
+        boolean craftable = entry != null && entry.isCraftable();
+        // AE2 の Shift + クリックはアイテムにしか効かない(液体などは黙って飲まれる)
+        if (stored && key instanceof AEItemKey) {
             menu.handleInteraction(entry.getSerial(), InventoryAction.SHIFT_CLICK);
             return true;
         }
-        int amount = Screen.hasShiftDown() ? stackSize(key) : unit(key);
-        pending = new Pending(key, amount, System.currentTimeMillis() + PENDING_MS);
-        menu.handleInteraction(entry.getSerial(), InventoryAction.AUTO_CRAFT);
+        if (craftable) {
+            int amount = Screen.hasShiftDown() ? stackSize(key) : unit(key);
+            pending = new Pending(key, amount, System.currentTimeMillis() + PENDING_MS, null);
+            menu.handleInteraction(entry.getSerial(), InventoryAction.AUTO_CRAFT);
+            return true;
+        }
+        String message = stored
+                ? "gomacraft_utility.ae_quick_craft.not_an_item"
+                : "gomacraft_utility.ae_quick_craft.unavailable";
+        mc.player.displayClientMessage(Component.translatable(message, key.getDisplayName()), true);
         return true;
     }
 
@@ -106,13 +130,25 @@ public final class QuickCraft {
             pending = null;
             return;
         }
-        if (Minecraft.getInstance().screen instanceof CraftAmountScreen screen) {
-            GenericStack what = screen.getMenu().getWhatToCraft();
-            // 数の画面の中身はサーバから少し遅れて届く。届いて品が合ったときだけ押す
-            if (what != null && p.key().equals(what.what())) {
-                pending = null;
-                screen.getMenu().confirm(p.amount(), false, true);
-            }
+        if (!(Minecraft.getInstance().screen instanceof CraftAmountScreen screen)) {
+            return;
+        }
+        if (p.screen() == null) {
+            p = p.seen(screen);
+            pending = p;
+        } else if (p.screen() != screen) {
+            // 依頼の後に見た画面とは別の数の画面(閉じて手で開き直した): 押さない
+            pending = null;
+            return;
+        }
+        GenericStack what = screen.getMenu().getWhatToCraft();
+        // 数の画面の中身はサーバから少し遅れて届く。届くまで待ち、品が違えば諦める
+        if (what == null) {
+            return;
+        }
+        pending = null;
+        if (p.key().equals(what.what())) {
+            screen.getMenu().confirm(p.amount(), false, true);
         }
     }
 

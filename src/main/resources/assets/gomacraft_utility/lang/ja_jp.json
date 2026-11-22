@@ -1,5 +1,6 @@
 {
   "key.categories.gomacraft_utility": "gomacraft utility",
   "key.gomacraft_utility.ae_quick_craft": "AE: EMI の品を取り出す・作る",
-  "gomacraft_utility.ae_quick_craft.unavailable": "%s はネットワークに無く、パターンもありません"
+  "gomacraft_utility.ae_quick_craft.unavailable": "%s はネットワークに無く、パターンもありません",
+  "gomacraft_utility.ae_quick_craft.not_an_item": "%s は手持ちへ移せず、パターンもありません"
 }
