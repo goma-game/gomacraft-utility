@@ -3,6 +3,7 @@
   "key.gomacraft_utility.ae_quick_craft": "AE: EMI の品を取り出す・作る",
   "gomacraft_utility.ae_quick_craft.unavailable": "%s はネットワークに無く、パターンもありません",
   "gomacraft_utility.ae_quick_craft.not_an_item": "%s は手持ちへ移せず、パターンもありません",
+  "gomacraft_utility.ae_grid_craft.timeout": "枠に材料を詰めましたが、%s ができませんでした(材料は枠に残っています)",
   "gomacraft_utility.screenshot.button": "[Discord に投稿]",
   "gomacraft_utility.screenshot.button.hover": "このスクショをサーバの Discord のチャンネルに投稿します。写っているチャットや名前もそのまま出ます(F1 で HUD を消して撮れます)。",
   "gomacraft_utility.screenshot.expired": "このスクショはもう投稿できません。",

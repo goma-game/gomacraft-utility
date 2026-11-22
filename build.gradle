@@ -75,6 +75,10 @@ repositories {
         forRepository { maven { url = 'https://maven.terraformersmc.com/' } }
         filter { includeGroup 'dev.emi' }
     }
+    exclusiveContent {
+        forRepository { maven { url = 'https://maven.theillusivec4.top/' } }
+        filter { includeGroup 'top.theillusivec4.curios' }
+    }
 }
 
 // 手元と自己検査で動かすときだけ積む Mod(配る jar と、その依存の宣言には入らない)
@@ -88,9 +92,14 @@ dependencies {
     // 段 2(EMI と AE2): 版は gradle.properties
     compileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     compileOnly "dev.emi:emi-neoforge:${emi_version}"
+    // Curios の枠のワイヤレスの端末を拾う(Curios が在るときだけ呼ぶ)
+    compileOnly "top.theillusivec4.curios:curios-neoforge:${curios_version}:api"
+    selftestCompileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     localRuntime "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     localRuntime "org.appliedenergistics:guideme:${guideme_version}"
     localRuntime "dev.emi:emi-neoforge:${emi_version}"
+    // 自己検査で Curios の枠を読む道(CuriosStacks)も通す
+    localRuntime "top.theillusivec4.curios:curios-neoforge:${curios_version}"
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'

@@ -3,6 +3,7 @@
   "key.gomacraft_utility.ae_quick_craft": "AE: take or craft the hovered EMI item",
   "gomacraft_utility.ae_quick_craft.unavailable": "%s is not in the network and has no pattern",
   "gomacraft_utility.ae_quick_craft.not_an_item": "%s cannot be moved to your inventory and has no pattern",
+  "gomacraft_utility.ae_grid_craft.timeout": "Filled the crafting grid, but %s did not appear (the materials stay in the grid)",
   "gomacraft_utility.screenshot.button": "[Post to Discord]",
   "gomacraft_utility.screenshot.button.hover": "Post this screenshot to the server's Discord channel. Chat and player names in it are posted as they are (F1 hides the HUD).",
   "gomacraft_utility.screenshot.expired": "This screenshot can no longer be posted.",

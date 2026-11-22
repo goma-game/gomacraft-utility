@@ -13,12 +13,15 @@ import dev.emi.emi.config.SidebarType;
 import dev.emi.emi.runtime.EmiDrawContext;
 import dev.emi.emi.runtime.EmiFavorite;
 import dev.emi.emi.screen.EmiScreenManager;
+import gomacraft.utility.Features;
 import gomacraft.utility.emiae.CountFormat;
+import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.emiae.StockIndex;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -30,7 +33,8 @@ import net.neoforged.neoforge.fluids.FluidStack;
 /**
  * EMI の一覧の品に、AE のネットワークの在庫数(右下)と「クラフト可」の印(左上の +)を描く。
  *
- * <p>数は、開いている端末の手元の写し({@link MEStorageMenu#getClientRepo})から {@link StockIndex} で引く。
+ * <p>数は、端末を開いている間はその手元の写し({@link MEStorageMenu#getClientRepo})から {@link StockIndex} で引き、
+ * 閉じている間はサーバへ問い合わせた答え({@link RemoteStock}。サーバにこの Mod が在るときだけ)から引く。
  * ⚠ EMI の「手持ち」には何も入れない(goma-org/gomabase#2286)。描くのは EMI が描いた見えている品だけ。
  */
 public final class StockBadges {
@@ -46,7 +50,23 @@ public final class StockBadges {
 
     /** {@code EmiScreenManager.ScreenSpace#render} の最後から呼ばれる(mixin)。EMI と同じ並びで品の位置を引く。 */
     public static void render(EmiScreenManager.ScreenSpace space, EmiDrawContext context, int startIndex) {
-        if (space.pageSize <= 0 || space.getType() == SidebarType.CHESS || !refresh()) {
+        if (space.pageSize <= 0 || space.getType() == SidebarType.CHESS) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        Function<AEKey, StockIndex.Stock> lookup;
+        boolean remote = false;
+        if (refresh(now)) {
+            // 端末を開いている: AE2 が端末へ送っている写しから(サーバへは問わない)
+            if (INDEX.isEmpty()) {
+                return;
+            }
+            lookup = INDEX::get;
+        } else if (Features.registry().isOn(EmiAeFeatures.STOCK_QUERY)) {
+            // 端末を閉じている: サーバへ問い合わせた答えの写しから(見えている品だけを問う)
+            lookup = key -> RemoteStock.get(key, now);
+            remote = true;
+        } else {
             return;
         }
         Font font = Minecraft.getInstance().font;
@@ -65,7 +85,8 @@ public final class StockBadges {
                         break outer;
                     }
                     EmiIngredient ingredient = stacks.get(i++);
-                    StockIndex.Stock stock = INDEX.get(keyOf(ingredient));
+                    AEKey key = keyOf(ingredient);
+                    StockIndex.Stock stock = key == null ? null : lookup.apply(key);
                     if (stock == null) {
                         continue;
                     }
@@ -77,6 +98,9 @@ public final class StockBadges {
             }
         } finally {
             pose.popPose();
+        }
+        if (remote) {
+            RemoteStock.flush(now);
         }
     }
 
@@ -95,7 +119,7 @@ public final class StockBadges {
     }
 
     /** 開いている端末の写しで索引を新しくする。端末が開いていなければ索引を空にして false。 */
-    private static boolean refresh() {
+    private static boolean refresh(long now) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || !(mc.player.containerMenu instanceof MEStorageMenu menu)) {
             INDEX.clear();
@@ -106,9 +130,9 @@ public final class StockBadges {
             INDEX.clear();
             return false;
         }
-        INDEX.refresh(repo, System.currentTimeMillis(), repo.getAllEntries(), GridInventoryEntry::getWhat,
+        INDEX.refresh(repo, now, repo.getAllEntries(), GridInventoryEntry::getWhat,
                 GridInventoryEntry::getStoredAmount, GridInventoryEntry::isCraftable);
-        return !INDEX.isEmpty();
+        return true;
     }
 
     /** 一覧の 1 枠を AE の鍵にする(品・液体の 1 つだけの枠。タグなど複数の品の枠は null)。 */
