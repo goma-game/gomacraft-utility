@@ -139,6 +139,9 @@ dependencies {
     localRuntime "curse.maven:mekanism-weapons-929829:${mekaweapons_file}"
     testRuntimeOnly "mekanism:Mekanism:${mekanism_version}"
     testRuntimeOnly "curse.maven:mekanism-weapons-929829:${mekaweapons_file}"
+    // enderdrives_primary_cache(goma-org/gomabase#2333): 型(DeduplicatedEnderCell)を使い、当て先の試験が jar を読む
+    compileOnly "curse.maven:enderdrives-1226739:${enderdrives_file}"
+    testRuntimeOnly "curse.maven:enderdrives-1226739:${enderdrives_file}"
 
     testImplementation platform('org.junit:junit-bom:5.13.4')
     testImplementation 'org.junit.jupiter:junit-jupiter'
