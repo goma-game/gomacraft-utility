@@ -21,7 +21,8 @@
     "mcjtylib_text.AbstractLabelMixin",
     "mcjtylib_text.WindowMixin",
     "ttf_glyph_lock.TrueTypeGlyphProviderLockMixin",
-    "ttf_glyph_lock.NativeImageFontLockMixin"
+    "ttf_glyph_lock.NativeImageFontLockMixin",
+    "ae2_repo_sort_cache.RepoSortCacheMixin"
   ],
   "server": [
     "mekagun_server.ItemMekaGunMixin"

@@ -49,6 +49,8 @@ public final class Features {
         features.add(new gomacraft.utility.features.mekagun_server.MekaGunServerFix());
         // 段 3(重さと見た目): goma-org/gomabase#2295。TTF のグリフの読み込みを FreeType の lock で並べる
         features.add(new gomacraft.utility.features.ttf_glyph_lock.TtfGlyphLock());
+        // 段 3(重さ): goma-org/gomabase#2295。AE2 の端末の一覧の並べ直しを軽くする(鍵の作り置きと、並べ直しのまとめ)
+        features.add(new gomacraft.utility.features.ae2_repo_sort_cache.Ae2RepoSortCache());
         // 段 4(スクショの Discord への投稿): goma-org/gomabase#2295
         features.addAll(ScreenshotFeatures.all());
         if (selftest) {
