@@ -22,11 +22,6 @@ public interface Feature {
         return List.of();
     }
 
-    /** 機能の中の細かい設定(設定のファイルの {@code [settings]} に既定の値を書く。読むのは {@code Features.config()})。 */
-    default List<Setting> settings() {
-        return List.of();
-    }
-
     /**
      * 画面にだけ効く機能か。true なら専用サーバでは {@code off(client only)} にする(mixin を client の欄に
      * 置いても、サーバの 1 行に {@code on} と出て、効いていないのに効いて見えるのを避ける)。

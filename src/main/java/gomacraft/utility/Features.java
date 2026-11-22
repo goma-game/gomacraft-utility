@@ -34,7 +34,6 @@ public final class Features {
     static final Logger LOGGER = LoggerFactory.getLogger(GomacraftUtility.MOD_ID);
 
     private static FeatureRegistry registry;
-    private static FeatureConfig config = FeatureConfig.empty();
 
     private Features() {
     }
@@ -67,15 +66,6 @@ public final class Features {
         return registry;
     }
 
-    /**
-     * 起動のときに読んだ設定(機能の中の細かい設定 {@link gomacraft.utility.feature.Setting} はここから読む)。
-     * 設定のファイルを読めなかったときは、どの設定も既定の値になる。
-     */
-    public static synchronized FeatureConfig config() {
-        registry();
-        return config;
-    }
-
     /** 機能の中身(mixin の中・event の listener)を守って走らせる({@link FeatureRegistry#guard})。 */
     public static boolean guard(String feature, Runnable body) {
         return registry().guard(feature, body);
@@ -100,7 +90,6 @@ public final class Features {
             LOGGER.warn("gomacraft_utility: 設定を読めないので全部の機能を切る: {}", FeatureRegistry.describe(e));
             config = FeatureConfig.unreadable();
         }
-        Features.config = config;
         return FeatureRegistry.evaluate(
                 features, FmlModLookup.INSTANCE, config, LOGGER::info, FMLEnvironment.dist.isDedicatedServer());
     }
