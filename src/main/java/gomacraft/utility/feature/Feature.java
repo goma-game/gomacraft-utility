@@ -30,6 +30,15 @@ public interface Feature {
         return false;
     }
 
+    /**
+     * 専用サーバにだけ効く機能か({@link #clientOnly} の対)。true ならクライアント(シングルプレイの内蔵サーバを含む)では
+     * {@code off(server only)} にする(mixin を server の欄に置いても、クライアントの 1 行に {@code on} と出て、
+     * 当たっていないのに効いて見えるのを避ける)。
+     */
+    default boolean serverOnly() {
+        return false;
+    }
+
     /** 有効なときに Mod の組み立ての中で 1 回呼ばれる。例外を投げたら、この機能だけが FAILED になる。 */
     default void init(FeatureContext context) throws Exception {
     }

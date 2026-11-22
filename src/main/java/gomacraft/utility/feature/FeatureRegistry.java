@@ -40,7 +40,10 @@ public final class FeatureRegistry {
         return evaluate(features, mods, config, sink, false);
     }
 
-    /** {@code dedicatedServer} が真なら、画面にだけ効く機能({@link Feature#clientOnly})を切る。 */
+    /**
+     * {@code dedicatedServer} が真なら、画面にだけ効く機能({@link Feature#clientOnly})を切る。偽(クライアント)なら、
+     * 専用サーバにだけ効く機能({@link Feature#serverOnly})を切る。
+     */
     public static FeatureRegistry evaluate(
             List<? extends Feature> features, ModLookup mods, FeatureConfig config, Consumer<String> sink,
             boolean dedicatedServer) {
@@ -53,6 +56,9 @@ public final class FeatureRegistry {
             FeatureStatus status = decide(f, mods, config);
             if (dedicatedServer && f.clientOnly() && status.state() == FeatureState.ON) {
                 status = new FeatureStatus(f.id(), FeatureState.OFF, "client only");
+            }
+            if (!dedicatedServer && f.serverOnly() && status.state() == FeatureState.ON) {
+                status = new FeatureStatus(f.id(), FeatureState.OFF, "server only");
             }
             statuses.put(f.id(), status);
         }

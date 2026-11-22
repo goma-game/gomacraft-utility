@@ -23,5 +23,7 @@
     "ttf_glyph_lock.TrueTypeGlyphProviderLockMixin",
     "ttf_glyph_lock.NativeImageFontLockMixin"
   ],
-  "server": []
+  "server": [
+    "mekagun_server.ItemMekaGunMixin"
+  ]
 }
