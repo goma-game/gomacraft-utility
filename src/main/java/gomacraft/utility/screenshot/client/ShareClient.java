@@ -58,9 +58,10 @@ public final class ShareClient {
     /** 札の数の上限(古いものから忘れる)。 */
     private static final int MAX_TOKENS = 32;
     /**
-     * 1 tick に送る切れ端の上限(30,000 バイト × 8 = 240 KB / tick)。⚠ 速さの絞りは送りの列
-     * ({@code channel().isWritable()})が持つ: 列が詰まったら(遅い回線)その tick は送らず、keepalive などの
-     * ほかの通信を先に通す。⚠ 固定の 300 KB/s に絞っていたときは、7.8 MB の PNG に 26 秒かかった
+     * 1 tick に送る切れ端の上限。⚠ 実際の絞りは送りの列の空き: 各 tick の頭の
+     * {@code channel().bytesBeforeUnwritable()}(既定の高水位 64 KiB)に収まる分だけを積む。だから速い回線でも
+     * 1 tick に約 2 個(約 1.2 MB/s)、遅い回線では列が空くまで積まない(keepalive などが並ぶのは多くて
+     * 約 64 KiB の後ろ)。⚠ 固定の 300 KB/s に絞っていたときは、7.8 MB の PNG に 26 秒かかった
      * (mcdev の実測 —— goma-org/gomabase#2295 の 12)。
      */
     private static final int MAX_CHUNKS_PER_TICK = 8;
@@ -214,7 +215,8 @@ public final class ShareClient {
      * 送る中身。PNG のまま上限を超えるときだけ JPEG に作り直す。それでも超える・読めないなら空。
      *
      * <p>⚠ 上限の内の PNG は作り直さない: 4K の PNG(7.8 MB)を JPEG(0.92)にしても 2.3 MB にしかならず、
-     * 作り直しに 3〜4 秒かかる(実測)。速さの律速だった固定の絞りを外したので、PNG のまま送るほうが速い。
+     * 作り直しに 3〜4 秒かかる(実測)。⚠ PNG のまま送るほうが速いのは、送りが約 1.5 MB/s 以上出る回線のとき
+     * (LAN・速い上り)。遅い上りでは JPEG のほうが早く着くが、速さを測らずに選ぶ形は持たない(上限の内は PNG)。
      */
     static Optional<byte[]> load(Path file) {
         try {
@@ -275,9 +277,14 @@ public final class ShareClient {
         int total = current.data().length;
         int count = ScreenshotRules.chunkCount(total);
         int next = current.next();
-        // 送りの列が詰まっている(遅い回線)間は送らない(keepalive などのほかの通信を先に通す)
+        // ⚠ この tick に積んでよい量は、tick の頭の送りの列の空き(`bytesBeforeUnwritable`。Netty の
+        // 既定の高水位は 64 KiB)だけ。主スレッドから渡した送りは、Netty の側で形になるまで水位に数えられない
+        // ので、ループの中で `isWritable()` を見ても止まらない(レビューの指摘)。空きが切れ端 1 個に
+        // 足りない tick は送らない —— 遅い回線では keepalive が並ぶのは多くて約 64 KiB の後ろ
+        long budget = connection.getConnection().channel().bytesBeforeUnwritable();
         for (int sent = 0; sent < MAX_CHUNKS_PER_TICK && next < count
-                && connection.getConnection().channel().isWritable(); sent++, next++) {
+                && budget >= ScreenshotRules.chunkLength(total, next); sent++, next++) {
+            budget -= ScreenshotRules.chunkLength(total, next);
             int from = next * ScreenshotRules.CHUNK_BYTES;
             byte[] piece = java.util.Arrays.copyOfRange(current.data(), from,
                     from + ScreenshotRules.chunkLength(total, next));
