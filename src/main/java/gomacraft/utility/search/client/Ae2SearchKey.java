@@ -15,6 +15,7 @@ import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
+import net.neoforged.neoforge.client.settings.KeyModifier;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
@@ -25,7 +26,8 @@ import org.lwjgl.glfw.GLFW;
  *   <li>マウスの下の品の名前をキー(既定は F)で検索欄へ送る。Alt を押しながらなら {@code @<Mod の名前空間>}。
  *       送り先は、端末の品の欄の品なら <b>EMI の</b>検索欄(端末で見つけた品のレシピを EMI で引くため。EMI が無ければ
  *       AE2 の検索欄)、それ以外(持ち物・EMI の一覧)なら AE2 の検索欄。</li>
- *   <li>EMI の検索欄の語を、キー(既定は G)で AE2 の検索欄へ写す(AE2 と EMI の検索を同期していないときに使う)。</li>
+ *   <li>EMI の検索欄の語を、キー(既定は {@code ;}。ATM10 の既定の割り当てで、修飾キーなしでどの Mod も使っていない
+ *       キー —— G は GuideME の案内の画面とぶつかった)で AE2 の検索欄へ写す(AE2 と EMI の検索を同期していないときに使う)。</li>
  * </ul>
  *
  * <p>文字を打っている最中(AE2 の検索欄・ほかの入力欄・EMI の検索欄に focus がある)は何もしない。
@@ -35,7 +37,8 @@ public final class Ae2SearchKey {
     public static final KeyMapping KEY = new KeyMapping("key.gomacraft_utility.ae2_fill_search",
             KeyConflictContext.GUI, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_F, "key.categories.gomacraft_utility");
     public static final KeyMapping COPY_EMI = new KeyMapping("key.gomacraft_utility.ae2_copy_emi_search",
-            KeyConflictContext.GUI, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_G, "key.categories.gomacraft_utility");
+            KeyConflictContext.GUI, InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_SEMICOLON,
+            "key.categories.gomacraft_utility");
 
     private static Screen swallowCharFor;
     private static KeyMapping swallowKey;
@@ -55,10 +58,17 @@ public final class Ae2SearchKey {
                 event -> Features.guard(SearchFeatures.AE2_SEARCH_KEY, () -> onChar(event)));
     }
 
-    /** 割り当てのキーそのものの一致(⚠ isActiveAndMatches は修飾キー「なし」まで見るので、Alt を押すと偽になる)。 */
+    /**
+     * 割り当てのキーの一致。⚠ isActiveAndMatches は修飾キー「なし」の割り当てで修飾キーを押すと偽になる(Alt + F が
+     * 届かない)ので、キーそのものを比べる。割り当てに修飾キー(Ctrl など)が付いていれば、それが押されているときだけ。
+     */
     private static boolean pressed(KeyMapping mapping, ScreenEvent.KeyPressed.Pre event) {
-        return !mapping.isUnbound()
-                && mapping.getKey().equals(InputConstants.getKey(event.getKeyCode(), event.getScanCode()));
+        if (mapping.isUnbound()
+                || !mapping.getKey().equals(InputConstants.getKey(event.getKeyCode(), event.getScanCode()))) {
+            return false;
+        }
+        KeyModifier modifier = mapping.getKeyModifier();
+        return modifier == KeyModifier.NONE || modifier.isActive(KeyConflictContext.GUI);
     }
 
     private static void onKey(ScreenEvent.KeyPressed.Pre event) {

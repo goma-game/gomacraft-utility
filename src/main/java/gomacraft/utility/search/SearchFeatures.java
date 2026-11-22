@@ -16,7 +16,7 @@ public final class SearchFeatures {
     public static final String AE2_ENGLISH_SEARCH = "ae2_english_search";
     /**
      * マウスの下の品の名前を、キー(既定は F)で検索欄へ送る(端末の品の欄の品は EMI の検索欄へ)。EMI の検索語を
-     * AE2 の検索欄へ写すキー(既定は G)も持つ。
+     * AE2 の検索欄へ写すキー(既定は ;)も持つ。
      */
     public static final String AE2_SEARCH_KEY = "ae2_search_key";
     /** AE2 の端末の検索欄のダブルクリックで、EMI の検索との同期をその場だけ反転する。 */

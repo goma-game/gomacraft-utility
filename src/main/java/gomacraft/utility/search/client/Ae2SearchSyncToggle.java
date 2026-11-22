@@ -59,7 +59,8 @@ public final class Ae2SearchSyncToggle {
         if (lastClick != 0 && now - lastClick <= DOUBLE_CLICK_MS) {
             lastClick = 0;
             inverted = !inverted;
-            boolean synced = AEConfig.instance().isSyncWithExternalSearch();
+            // 端末が今使う値(設定の値を、反転の印で読み替えたもの)
+            boolean synced = AEConfig.instance().isSyncWithExternalSearch() != inverted;
             notice = Component.translatable(synced
                     ? "gomacraft_utility.search_sync.on" : "gomacraft_utility.search_sync.off");
             noticeUntil = now + NOTICE_MS;
