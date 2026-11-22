@@ -42,6 +42,10 @@ class MixinTargetsTest {
     private static final String ACCESSOR = "Lorg/spongepowered/asm/mixin/gen/Accessor;";
     private static final String INVOKER = "Lorg/spongepowered/asm/mixin/gen/Invoker;";
     private static final String WRAP_METHOD = "Lcom/llamalad7/mixinextras/injector/wrapmethod/WrapMethod;";
+    private static final String INJECT = "Lorg/spongepowered/asm/mixin/injection/Inject;";
+    private static final String CALLBACK_INFO = "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfo;";
+    private static final String CALLBACK_INFO_RETURNABLE =
+            "Lorg/spongepowered/asm/mixin/injection/callback/CallbackInfoReturnable;";
 
     @Test
     void everyTargetExistsInTheBuildVersions() throws Exception {
@@ -91,14 +95,14 @@ class MixinTargetsTest {
                     assertTrue(target.methods.stream().anyMatch(m -> m.name.equals(methodName) && m.desc.equals(method.desc)),
                             where + ": @Invoker のメソッド " + methodName + " が " + target.name + " に無い");
                 } else if (MixinContractTest.isInjector(a.desc)) {
-                    checkInjector(where, a, target);
+                    checkInjector(where, a, method, target);
                 }
             }
         }
     }
 
     @SuppressWarnings("unchecked")
-    private static void checkInjector(String where, AnnotationNode injector, ClassNode target) {
+    private static void checkInjector(String where, AnnotationNode injector, MethodNode handler, ClassNode target) {
         List<String> selectors = (List<String>) value(injector, "method");
         assertNotNull(selectors, where + ": injector に method が無い");
         List<AnnotationNode> ats = new ArrayList<>();
@@ -122,6 +126,9 @@ class MixinTargetsTest {
                     .filter(m -> m.name.equals(methodName) && (desc == null || m.desc.equals(desc)))
                     .toList();
             assertTrue(!found.isEmpty(), where + ": 当て先のメソッド " + selector + " が " + target.name + " に無い");
+            if (injector.desc.equals(INJECT)) {
+                checkCallbackInfo(where, selector, handler, found);
+            }
             for (AnnotationNode a : ats) {
                 String kind = (String) value(a, "value");
                 String atTarget = (String) value(a, "target");
@@ -135,6 +142,27 @@ class MixinTargetsTest {
                     default -> fail(where + ": この試験が知らない @At の種類 " + kind + "(ここに見方を足す)");
                 }
             }
+        }
+    }
+
+    /**
+     * {@code @Inject} の受け手の型が、当て先の戻り値に合うこと。値を返す当て先には {@code CallbackInfoReturnable}、
+     * 返さない当て先には {@code CallbackInfo}。⚠ 合わなければ、Mixin は当て先のクラスを読み込んだ時点で
+     * InvalidInjectionException(「CallbackInfoReturnable is required!」など)を投げ、同じクラスに当てるほかの機能まで
+     * 当たらない。クライアントの mixin は起動の自己検査(サーバ)では読まれないので、ここで先に落とす(#19 のレビュー)。
+     */
+    static void checkCallbackInfo(String where, String selector, MethodNode handler, List<MethodNode> found) {
+        List<String> params = new ArrayList<>();
+        for (Type type : Type.getArgumentTypes(handler.desc)) {
+            params.add(type.getDescriptor());
+        }
+        for (MethodNode m : found) {
+            boolean returnsValue = Type.getReturnType(m.desc).getSort() != Type.VOID;
+            String expected = returnsValue ? CALLBACK_INFO_RETURNABLE : CALLBACK_INFO;
+            String wrong = returnsValue ? CALLBACK_INFO : CALLBACK_INFO_RETURNABLE;
+            assertTrue(params.contains(expected) && !params.contains(wrong),
+                    where + ": " + selector + m.desc + " は" + (returnsValue ? "値を返す" : "値を返さない")
+                            + "ので、受け手は " + expected + " を受ける(" + handler.desc + ")");
         }
     }
 

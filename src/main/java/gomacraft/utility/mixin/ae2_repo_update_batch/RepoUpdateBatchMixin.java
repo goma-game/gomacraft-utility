@@ -1,16 +1,19 @@
 package gomacraft.utility.mixin.ae2_repo_update_batch;
 
 import appeng.client.gui.me.common.Repo;
+import appeng.menu.me.common.GridInventoryEntry;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import gomacraft.utility.Features;
 import gomacraft.utility.features.ae2_repo_update_batch.Ae2RepoUpdateBatch;
+import java.util.List;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Group;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * AE2 の端末の手元の一覧({@code Repo})の並べ直しを、一覧を読まれる前の 1 回にまとめる(理由は
@@ -54,25 +57,25 @@ public abstract class RepoUpdateBatchMixin {
 
     @Group(name = "gomacraft_utility$ae2_repo_update_batch$flush_get", min = 1)
     @Inject(method = "get(I)Lappeng/menu/me/common/GridInventoryEntry;", at = @At("HEAD"), require = 0)
-    private void gomacraftUtility$flushBeforeGet(CallbackInfo ci) {
+    private void gomacraftUtility$flushBeforeGet(int idx, CallbackInfoReturnable<GridInventoryEntry> cir) {
         gomacraftUtility$flushView();
     }
 
     @Group(name = "gomacraft_utility$ae2_repo_update_batch$flush_size", min = 1)
     @Inject(method = "size()I", at = @At("HEAD"), require = 0)
-    private void gomacraftUtility$flushBeforeSize(CallbackInfo ci) {
+    private void gomacraftUtility$flushBeforeSize(CallbackInfoReturnable<Integer> cir) {
         gomacraftUtility$flushView();
     }
 
     @Group(name = "gomacraft_utility$ae2_repo_update_batch$flush_pinned", min = 1)
     @Inject(method = "getPinnedEntries()Ljava/util/List;", at = @At("HEAD"), require = 0)
-    private void gomacraftUtility$flushBeforePinned(CallbackInfo ci) {
+    private void gomacraftUtility$flushBeforePinned(CallbackInfoReturnable<List<GridInventoryEntry>> cir) {
         gomacraftUtility$flushView();
     }
 
     @Group(name = "gomacraft_utility$ae2_repo_update_batch$flush_has_pinned", min = 1)
     @Inject(method = "hasPinnedRow()Z", at = @At("HEAD"), require = 0)
-    private void gomacraftUtility$flushBeforeHasPinned(CallbackInfo ci) {
+    private void gomacraftUtility$flushBeforeHasPinned(CallbackInfoReturnable<Boolean> cir) {
         gomacraftUtility$flushView();
     }
 
