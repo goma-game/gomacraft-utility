@@ -39,17 +39,31 @@ public final class SearchHistoryStore {
 
     private final Map<String, List<Entry>> players = new LinkedHashMap<>();
     /** お気に入りでない語を持つ件数の上限。 */
-    private final int maxRecent;
+    private int maxRecent;
 
     public SearchHistoryStore() {
         this(MAX_RECENT);
     }
 
     public SearchHistoryStore(int maxRecent) {
+        setMaxRecent(maxRecent);
+    }
+
+    /**
+     * お気に入りでない語を持つ件数の上限を変える(設定の画面で変えたとき)。減らしたら古いものから消す
+     * (ファイルへ書くのは呼ぶ側の次の保存)。
+     */
+    public void setMaxRecent(int maxRecent) {
         if (maxRecent < 1) {
             throw new IllegalArgumentException("maxRecent: " + maxRecent);
         }
+        if (maxRecent == this.maxRecent) {
+            return;
+        }
         this.maxRecent = maxRecent;
+        for (List<Entry> entries : players.values()) {
+            trim(entries);
+        }
     }
 
     /**
