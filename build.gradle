@@ -125,6 +125,8 @@ dependencies {
     compileOnly "maven.modrinth:mcjtylib:${mcjtylib_version}"
     // 当て先の試験(MixinTargetsTest)が、当て先のクラスとメソッドが組み立ての版に在ることを ASM で読む
     testRuntimeOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
+    // ae2_repo_sort_cache: 並べ方の試験が AE2 の品の型(AEKey)と並べ方(KeySorters)を使う
+    testCompileOnly "org.appliedenergistics:appliedenergistics2:${ae2_version}"
     testRuntimeOnly "dev.emi:emi-neoforge:${emi_version}"
     testRuntimeOnly "maven.modrinth:natures-compass:${natures_compass_version}"
     testRuntimeOnly "maven.modrinth:explorers-compass:${explorers_compass_version}"
