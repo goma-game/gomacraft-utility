@@ -4,10 +4,16 @@ name: release
 # gomabase の台帳は release の asset の URL と sha256 をピンして取り込む(tools/client_additions.py の
 # validate_provider が見るのは、tag・draft でないこと・名前の合う asset が 1 つであること)。
 #
+# 2 つの job に分ける: 書き込みの token(contents: write)を、Gradle とそのプラグインが動く job に置かない。
+# - build: 読み取りの権限だけで、tag を確かめ、検査を回し、jar と sha256 を artifact に上げる
+# - publish: checkout も Gradle も使わず、artifact を下ろして sha256 を照合し、tag がまだ同じ commit を
+#   指すかを確かめてから release を作る
+#
 # 止めるもの(どれも作り直しで hash が変わる・取り違える形):
 # - tag の commit が main に無い
 # - tag と gradle.properties の mod_version が合わない
 # - 同じ tag の release が既に在る(上書きしない。作り直すなら新しい版を切る)
+# - 検査の後に tag が別の commit へ付け替えられた
 on:
   push:
     tags: ['v*']
@@ -20,23 +26,25 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
+  build:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
-      contents: write
+      contents: read
     env:
       TAG: ${{ github.ref_name }}
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: tag を確かめる
+        id: tag
         run: |
           set -eu
-          git fetch --no-tags origin main
+          git fetch --no-tags "https://github.com/$GITHUB_REPOSITORY.git" main:refs/remotes/origin/main
           if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
             echo "NG: tag $TAG の commit $GITHUB_SHA が main に無い" >&2
             exit 1
@@ -46,14 +54,7 @@ jobs:
             echo "NG: tag $TAG と mod_version=$version が合わない" >&2
             exit 1
           fi
-          if out=$(gh release view "$TAG" 2>&1); then
-            echo "NG: release $TAG は既に在る(上書きしない)" >&2
-            exit 1
-          elif ! printf '%s\n' "$out" | grep -q 'release not found'; then
-            echo "NG: release $TAG の有無を確かめられない: $out" >&2
-            exit 1
-          fi
-          echo "VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin
@@ -69,12 +70,68 @@ jobs:
         run: ./gradlew --no-daemon runGameTestServer
       - name: 自己検査のログを確かめる
         run: sh .github/scripts/check-build.sh selftest run-selftest/logs/latest.log
+      - name: sha256 を作る
+        run: |
+          set -eu
+          cd build/libs
+          sha256sum "gomacraft_utility-${{ steps.tag.outputs.version }}.jar" \
+            > "gomacraft_utility-${{ steps.tag.outputs.version }}.jar.sha256"
+          cat "gomacraft_utility-${{ steps.tag.outputs.version }}.jar.sha256"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: release-jar
+          path: |
+            build/libs/gomacraft_utility-${{ steps.tag.outputs.version }}.jar
+            build/libs/gomacraft_utility-${{ steps.tag.outputs.version }}.jar.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      VERSION: ${{ needs.build.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: release-jar
+          path: dist
+      - name: sha256 を照合する
+        run: |
+          set -eu
+          cd dist
+          ls -la
+          sha256sum -c "gomacraft_utility-$VERSION.jar.sha256"
+      - name: tag と release を確かめる
+        run: |
+          set -eu
+          ref=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq '.object.type + " " + .object.sha')
+          type=${ref%% *}
+          sha=${ref#* }
+          if [ "$type" = tag ]; then
+            sha=$(gh api "repos/$GH_REPO/git/tags/$sha" --jq '.object.sha')
+          fi
+          if [ "$sha" != "$GITHUB_SHA" ]; then
+            echo "NG: tag $TAG が検査した commit $GITHUB_SHA でなく $sha を指している(付け替えられた)" >&2
+            exit 1
+          fi
+          if out=$(gh release view "$TAG" 2>&1); then
+            echo "NG: release $TAG は既に在る(上書きしない)" >&2
+            exit 1
+          elif ! printf '%s\n' "$out" | grep -q 'release not found'; then
+            echo "NG: release $TAG の有無を確かめられない: $out" >&2
+            exit 1
+          fi
       - name: release を作る
         run: |
           set -eu
-          jar="build/libs/gomacraft_utility-$VERSION.jar"
-          [ -f "$jar" ] || { echo "NG: $jar が無い" >&2; exit 1; }
-          (cd build/libs && sha256sum "$(basename "$jar")" > "$(basename "$jar").sha256")
+          jar="dist/gomacraft_utility-$VERSION.jar"
           digest=$(cut -d' ' -f1 "$jar.sha256")
           {
             echo "commit: $GITHUB_SHA"

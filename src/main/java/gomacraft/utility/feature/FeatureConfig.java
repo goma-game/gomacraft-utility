@@ -8,8 +8,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 機能ごとの切り替えの設定({@code config/gomacraft_utility-features.toml})。
@@ -17,6 +19,7 @@ import java.util.regex.Pattern;
  * <p>NeoForge の設定の仕組み(ModConfigSpec)を使わずに自分で読むのは、mixin の当否を決める時点
  * (Mod の組み立てより前)で値が要るため。読むのは {@code [features]} の {@code 名前 = true|false} だけ。
  * 書いていない機能は既定の値を使い、読めない値の機能は切る(壊れた設定で黙って有効にしない)。
+ * 設定のファイルそのものを読めなければ、全部の機能を切る({@link #unreadable})。
  */
 public final class FeatureConfig {
     public static final String FILE_NAME = "gomacraft_utility-features.toml";
@@ -26,13 +29,20 @@ public final class FeatureConfig {
 
     /** 機能の名前 → 書かれていた値(true / false 以外も、そのまま持つ)。 */
     private final Map<String, String> values;
+    private final boolean unreadable;
 
-    private FeatureConfig(Map<String, String> values) {
+    private FeatureConfig(Map<String, String> values, boolean unreadable) {
         this.values = values;
+        this.unreadable = unreadable;
     }
 
     public static FeatureConfig empty() {
-        return new FeatureConfig(Map.of());
+        return new FeatureConfig(Map.of(), false);
+    }
+
+    /** 設定のファイルを読めなかった(全部の機能を切る)。 */
+    public static FeatureConfig unreadable() {
+        return new FeatureConfig(Map.of(), true);
     }
 
     /** 設定の中身を読む。{@code [features]} の外と、知らない形の行は無視する。 */
@@ -57,11 +67,11 @@ public final class FeatureConfig {
                 values.put(entry.group(1), entry.group(2));
             }
         }
-        return new FeatureConfig(values);
+        return new FeatureConfig(values, false);
     }
 
     /**
-     * 設定のファイルを読む。無ければ既定の値で作ってから読む(作れなければ既定の値で動く)。
+     * 設定のファイルを読む。無ければ既定の値で作ってから読む。
      * 在るファイルは書き換えない(人が書いた値を消さない)。
      */
     public static FeatureConfig load(Path configDir, List<? extends Feature> features) throws IOException {
@@ -88,6 +98,9 @@ public final class FeatureConfig {
 
     /** 書かれた値。書かれていなければ空。値が true / false でなければ {@link Value#INVALID}。 */
     public Optional<Value> value(String id) {
+        if (unreadable) {
+            return Optional.of(Value.UNREADABLE);
+        }
         String v = values.get(id);
         if (v == null) {
             return Optional.empty();
@@ -99,9 +112,17 @@ public final class FeatureConfig {
         });
     }
 
+    /** 機能の一覧に無い名前(書き間違いを黙って無視しないために、起動のときに警告へ出す)。 */
+    public Set<String> unknownKeys(List<? extends Feature> features) {
+        Set<String> known = features.stream().map(Feature::id).collect(Collectors.toSet());
+        return values.keySet().stream().filter(k -> !known.contains(k))
+                .collect(Collectors.toCollection(java.util.LinkedHashSet::new));
+    }
+
     public enum Value {
         TRUE,
         FALSE,
-        INVALID
+        INVALID,
+        UNREADABLE
     }
 }

@@ -5,11 +5,10 @@
   "plugin": "gomacraft.utility.mixinsupport.GomacraftMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "mixins": [
-    "selftest_broken.SelftestBrokenMixin"
+    "selftest_broken.SelftestBrokenMixin",
+    "selftest_at.SelftestAtMixin",
+    "selftest_missing_class.SelftestMissingClassMixin"
   ],
   "client": [],
-  "server": [],
-  "injectors": {
-    "defaultRequire": 1
-  }
+  "server": []
 }

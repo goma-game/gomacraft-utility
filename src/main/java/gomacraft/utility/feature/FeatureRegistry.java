@@ -50,6 +50,9 @@ public final class FeatureRegistry {
 
     private static FeatureStatus decide(Feature f, ModLookup mods, FeatureConfig config) {
         Optional<FeatureConfig.Value> value = config.value(f.id());
+        if (value.isPresent() && value.get() == FeatureConfig.Value.UNREADABLE) {
+            return new FeatureStatus(f.id(), FeatureState.OFF, "config unreadable");
+        }
         if (value.isPresent() && value.get() == FeatureConfig.Value.INVALID) {
             return new FeatureStatus(f.id(), FeatureState.OFF, "config invalid");
         }
@@ -112,18 +115,55 @@ public final class FeatureRegistry {
     }
 
     /**
-     * 機能を壊れたと記す。知らない名前は {@code unknown_feature} として記す(壊れたことを黙らない)。
+     * 機能を壊れたと記す。知らない名前は {@code unknown_<名前>} として記す(壊れたことを黙らない。名前ごとに分ける)。
      * 起動時の 1 行を出した後なら、もう一度出す。
      */
     public synchronized void markFailed(String id, String reason) {
-        String key = statuses.containsKey(id) ? id : "unknown_feature";
+        String key = statuses.containsKey(id) ? id : unknownKey(id);
         FeatureStatus before = statuses.get(key);
         if (before != null && before.state() == FeatureState.FAILED) {
             return;
         }
-        statuses.put(key, new FeatureStatus(key, FeatureState.FAILED, key.equals(id) ? reason : id + ": " + reason));
+        statuses.put(key, new FeatureStatus(key, FeatureState.FAILED, reason));
         if (emitted) {
             sink.accept(line());
+        }
+    }
+
+    private static String unknownKey(String id) {
+        String safe = id == null ? "" : id.toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z0-9_]", "_");
+        return "unknown_" + (safe.isEmpty() ? "feature" : safe);
+    }
+
+    /**
+     * 機能の中身(mixin の中・event の listener)を守って走らせる。有効でなければ何もしない。例外を投げたら
+     * その機能を FAILED にし、以後はその機能のどの部分も走らない(FAILED の機能の残りの mixin・listener を止める)。
+     *
+     * @return 走らせて例外が無ければ true
+     */
+    public boolean guard(String id, Runnable body) {
+        if (!isOn(id)) {
+            return false;
+        }
+        try {
+            body.run();
+            return true;
+        } catch (Throwable t) {
+            markFailed(id, describe(t));
+            return false;
+        }
+    }
+
+    /** {@link #guard(String, Runnable)} の値を返す形。有効でないか例外なら {@code fallback}。 */
+    public <T> T guard(String id, java.util.function.Supplier<T> body, T fallback) {
+        if (!isOn(id)) {
+            return fallback;
+        }
+        try {
+            return body.get();
+        } catch (Throwable t) {
+            markFailed(id, describe(t));
+            return fallback;
         }
     }
 

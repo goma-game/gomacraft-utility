@@ -53,7 +53,7 @@ class FeatureRegistryTest {
 
         assertEquals(
                 "gomacraft_utility: features plain=on needs_ae2=on"
-                        + " old_ae2=off(version: ae2 19.2.17 outside [20.0,])"
+                        + " old_ae2=off(version: ae2 19.2.17 outside [20.0,})"
                         + " needs_missing=off(mod missing: nothere)"
                         + " off_by_default=off(disabled) turned_off=off(disabled)"
                         + " bad_value=off(config invalid)",
@@ -90,7 +90,7 @@ class FeatureRegistryTest {
 
         assertEquals(List.of(
                 "gomacraft_utility: features a=on b=on",
-                "gomacraft_utility: features a=on b=FAILED(InvalidInjectionException: no target [x] at y)"), lines);
+                "gomacraft_utility: features a=on b=FAILED(InvalidInjectionException: no target {x} at y)"), lines);
         assertFalse(registry.isOn("b"));
     }
 
@@ -99,7 +99,35 @@ class FeatureRegistryTest {
         FeatureRegistry registry = FeatureRegistry.evaluate(
                 List.of(), mods(Map.of()), FeatureConfig.empty(), line -> { });
         registry.markFailed("ghost", "boom");
-        assertEquals("gomacraft_utility: features unknown_feature=FAILED(ghost: boom)", registry.line());
+        registry.markFailed("Other-One", "bang");
+        assertEquals("gomacraft_utility: features unknown_ghost=FAILED(boom) unknown_other_one=FAILED(bang)",
+                registry.line());
+    }
+
+    @Test
+    void unreadableConfigTurnsEverythingOff() {
+        FeatureRegistry registry = FeatureRegistry.evaluate(
+                List.of(feature("a", true), feature("b", false)), mods(Map.of()), FeatureConfig.unreadable(),
+                line -> { });
+        assertEquals("gomacraft_utility: features a=off(config unreadable) b=off(config unreadable)",
+                registry.line());
+    }
+
+    @Test
+    void guardRunsOnlyEnabledFeaturesAndStopsThemAfterAnException() {
+        FeatureRegistry registry = FeatureRegistry.evaluate(
+                List.of(feature("live", true), feature("off", false)), mods(Map.of()), FeatureConfig.empty(),
+                line -> { });
+        List<String> ran = new ArrayList<>();
+        assertTrue(registry.guard("live", () -> ran.add("live-1")));
+        assertFalse(registry.guard("off", () -> ran.add("off")));
+        assertFalse(registry.guard("live", () -> {
+            throw new IllegalStateException("boom");
+        }));
+        assertFalse(registry.guard("live", () -> ran.add("live-2")), "FAILED の後は走らない");
+        assertEquals("fallback", registry.guard("live", () -> "value", "fallback"));
+        assertEquals(List.of("live-1"), ran);
+        assertEquals(FeatureState.FAILED, registry.status("live").orElseThrow().state());
     }
 
     @Test

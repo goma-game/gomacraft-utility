@@ -34,6 +34,12 @@ class FeatureConfigTest {
     }
 
     @Test
+    void namesUnknownKeys() {
+        FeatureConfig config = FeatureConfig.parse("[features]\nalpha = true\nalhpa = false\n");
+        assertEquals(java.util.Set.of("alhpa"), config.unknownKeys(List.of(A)));
+    }
+
+    @Test
     void writesDefaultsOnceAndKeepsUserEdits(@TempDir Path dir) throws Exception {
         FeatureConfig first = FeatureConfig.load(dir, List.of(A));
         assertEquals(Optional.of(FeatureConfig.Value.TRUE), first.value("alpha"));

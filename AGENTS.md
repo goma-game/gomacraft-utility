@@ -34,8 +34,13 @@
 - `.claude/settings.json` と `.claude/hooks/cloud-session-start.sh` は、ほかの作業リポジトリと同じ中身で置く(揃いは GitHome の検査が見る。ここだけ直さない)。
 - 検査の正は CI(流れの正は GitHome の `AGENTS.md`「仕事の進め方」)。手元では変更したところの速い検査だけ回す。
   - CI(`.github/workflows/build.yml`)は、組み立てと JUnit・配る jar の中身・起動の自己検査(gametest のサーバ)を回す。何を確かめるかの正は `.github/scripts/check-build.sh`。
-  - 起動の自己検査は、わざと壊した機能 `selftest_broken`(自己検査のときだけ一覧に入る)の mixin が当て損ねても、その機能だけが FAILED になって起動が続くことを見る。機能の枠(`gomacraft.utility.feature`・`mixinsupport`)を変えたら、ここが落ちないことを確かめる。
+  - 起動の自己検査は、わざと壊した機能(`Features.SELFTEST_FEATURES`。自己検査のときだけ一覧に入る)の mixin が当て損ねても、それぞれの機能だけが FAILED になって起動が続き、最初の 1 行に間に合うことを見る。壊し方は 3 つ(当て先のメソッドが無い・`@At` が合わない・当て先のクラスが無い)。機能の枠(`gomacraft.utility.feature`・`mixinsupport`)を変えたら、ここが落ちないことを確かめる。
   - 手元に JDK 21 が無ければ、Docker の `gradle:<版>-jdk21` の箱で `./gradlew build runGameTestServer` を回す(手元の JDK は 21 と限らない)。
-- 機能の足し方: `Feature` を実装して `Features.catalog` に足し、mixin は `gomacraft.utility.mixin.<機能の名前>` の包みに置いて `gomacraft_utility.mixins.json` に並べる。通信を足すときは payload を全部 `optional()` にする。
-- 起動時の状態の 1 行の形(`StatusLine`)は gomabase の起動の検証との約束。変えるときは gomabase の読み手(`tools/mc-client-boot.py`・`tools/scan-server-logs.py`)と同時に変える(見本の文字列を両方の試験に置いてある)。
-- release: `gradle.properties` の `mod_version` を上げた PR をマージしてから、main の commit に `v<mod_version>` の tag を押す。release の workflow が検査を回し、jar と sha256 を GitHub Release に置く(同じ tag の作り直しはしない —— gomabase が sha256 をピンする)。
+- 機能の足し方:
+  - `Feature` を実装して `Features.catalog` に足す。mixin は `gomacraft.utility.mixin.<機能の名前>` の包みに置いて `gomacraft_utility.mixins.json` に並べる。
+  - injector(`@Inject`・`@Redirect`・`@ModifyArg` など)は全部 `require = 0` と `@Group(name = "gomacraft_utility$<機能>", min = 1)` で書く。`require` の不足は Mixin が Error を投げて起動ごと止まり、この Mod では拾えない。group の不足は、その機能だけの FAILED に落とせる。L1 の `MixinContractTest` が書き忘れを落とす。
+  - mixin の中身と event の listener は `Features.guard("<機能>", () -> …)` で包む。有効でない機能は走らず、例外を投げた機能は FAILED になって、以後はその機能のどの部分も走らない(FAILED の機能の、当たってしまった残りの mixin を止める)。
+  - 当て先のクラスは、起動時の 1 行の前に読み込ませる(`GomacraftMixinPlugin.preloadTargets`。初期化はしない)。クラスを読み込んだだけで副作用のあるものに当てるなら、先にここで困らないかを確かめる。
+  - 通信を足すときは payload を全部 `optional()` にし、送る前に相手がその channel を持つかを確かめる(`hasChannel`。この Mod の無い相手もいる)。
+- 起動時の状態の 1 行の形(`StatusLine`)は gomabase の起動の検証との約束。変えるときは gomabase の読み手(`tools/mc-client-boot.py`・`tools/scan-server-logs.py`)と同時に変える(見本の文字列を両方の試験に置いてある)。jar の名前(`gomacraft_utility-<mod_version>.jar`)も約束(`check-build.sh jar` が固定する)。
+- release: `gradle.properties` の `mod_version` を上げた PR をマージしてから、main の commit に `v<mod_version>` の tag を付けて `git push origin refs/tags/v<mod_version>` で押す(`git push origin v<mod_version>` の形は、GitHome のフックが恒久の枝への push として止める)。release の workflow が検査を回し、jar と sha256 を GitHub Release に置く(同じ tag の作り直しはしない —— gomabase が sha256 をピンする)。
