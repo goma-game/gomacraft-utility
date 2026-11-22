@@ -8,9 +8,9 @@
   "gomacraft_utility.ae_quick_craft.no_pattern": "%s has no pattern",
   "gomacraft_utility.settings.emi_ae_quick_craft.skip_confirm": "Alt + click crafts right away (skip the crafting plan screen)",
   "key.gomacraft_utility.ae2_fill_search": "Send hovered item to AE2 terminal search",
-  "gomacraft_utility.search_history.hint": "Left: search / Right: delete / Shift+Left or Middle: favorite",
+  "gomacraft_utility.search_history.hint": "Left: search / Right: delete / Shift+Left or Middle: favorite / Wheel: older",
   "gomacraft_utility.screenshot.button": "[Post to Discord]",
-  "gomacraft_utility.screenshot.button.hover": "Post this screenshot to Discord under your name. Hold %s to choose the channel. Chat and player names in it are posted as they are (F1 hides the HUD).",
+  "gomacraft_utility.screenshot.button.hover": "Post this screenshot to Discord under your name. Hold %s to choose the channel.",
   "gomacraft_utility.screenshot.choose.title": "Where to post this screenshot?",
   "gomacraft_utility.screenshot.choose.chat": "Chat channel",
   "gomacraft_utility.screenshot.choose.screenshot": "Screenshot channel",
@@ -29,5 +29,8 @@
   "gomacraft_utility.screenshot.result.bad_image": "The server could not read the screenshot.",
   "gomacraft_utility.screenshot.result.spool_full": "Too many screenshots are waiting to be posted. Try again later.",
   "gomacraft_utility.screenshot.result.broken": "The screenshot was not received completely. Try again.",
-  "gomacraft_utility.screenshot.result.error": "The server could not save the screenshot."
+  "gomacraft_utility.screenshot.result.error": "The server could not save the screenshot.",
+  "key.gomacraft_utility.ae2_copy_emi_search": "Copy EMI search to AE2 terminal search",
+  "gomacraft_utility.search_sync.on": "Search sync with EMI: on (double-click to switch back)",
+  "gomacraft_utility.search_sync.off": "Search sync with EMI: off (double-click to switch back)"
 }
