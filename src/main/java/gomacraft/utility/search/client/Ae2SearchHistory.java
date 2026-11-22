@@ -8,6 +8,8 @@ import gomacraft.utility.feature.FeatureRegistry;
 import gomacraft.utility.mixin.ae2_search_history.MEStorageScreenHistoryAccessor;
 import gomacraft.utility.search.SearchFeatures;
 import gomacraft.utility.search.SearchHistoryStore;
+import gomacraft.utility.settings.ClientSettings;
+import gomacraft.utility.settings.Settings;
 import java.nio.file.Path;
 import java.util.List;
 import net.minecraft.client.Minecraft;
@@ -30,8 +32,8 @@ import org.lwjgl.glfw.GLFW;
  *   <li>検索欄に focus があるあいだ、欄の<b>上</b>に履歴を出す(端末の品の欄を隠さない)。欄に近い下から、お気に入り →
  *       新しい順に上へ積む。</li>
  *   <li>欄が空のときは最近の数件だけ出し、一覧にホバーすると広げる。入力中は入力に合う語だけを出し、合うものが無ければ出さない。</li>
- *   <li>一覧の上でホイールを回すと古いものへ遡る。出す件数(空のとき 3・広げたとき 10)と持つ件数(100)は今は定数で、
- *       設定の画面(ClientSettings)が入った後にそこへ載せる。</li>
+ *   <li>一覧の上でホイールを回すと古いものへ遡る。出す件数(空のとき・広げたとき)と持つ件数は設定の画面
+ *       ({@code ClientSettings}。既定は 3・10・100)で変えられ、すぐ効く(持つ件数は次に記すときから)。</li>
  *   <li>記すのは、Enter・欄の外を押したとき・端末を閉じたとき・F キーで送ったとき、と EMI の検索欄から focus が外れたとき
  *       (AE2 と EMI の履歴を 1 つにする。打つ 1 字ごとには記さない)。</li>
  *   <li>左で使う、右で消す、Shift + 左か中でお気に入りを付け外し。↑↓で選び、Enter で使う。操作の案内は一覧の上の端に出す
@@ -49,12 +51,15 @@ public final class Ae2SearchHistory {
     /** 端末の左の外へ出すのに要る幅(これより狭ければ、上の端に寄せてでも欄の上に出す)。 */
     private static final int MIN_SIDE_WIDTH = 60;
 
-    /** 欄が空でホバーしていないときに出す件数。 */
-    static final int COLLAPSED_ROWS = 3;
+    /** 欄が空でホバーしていないときに出す件数(設定の画面で変えられる。すぐ効く)。 */
+    public static final ClientSettings.Int COLLAPSED_ROWS =
+            new ClientSettings.Int(SearchFeatures.AE2_SEARCH_HISTORY, "collapsed_rows", 3, 1, 20);
     /** 広げたとき(ホバー・入力中)に一度に出す件数。それより古いものはホイールで遡る。 */
-    static final int VISIBLE_ROWS = 10;
+    public static final ClientSettings.Int VISIBLE_ROWS =
+            new ClientSettings.Int(SearchFeatures.AE2_SEARCH_HISTORY, "visible_rows", 10, 1, 30);
     /** 持つ件数(お気に入りは数えない。古いものから消す)。 */
-    static final int KEEP = 100;
+    public static final ClientSettings.Int KEEP =
+            new ClientSettings.Int(SearchFeatures.AE2_SEARCH_HISTORY, "keep", 100, 10, 1000);
 
     private static final int MAX_WRITE_FAILURES = 3;
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(GomacraftUtility.MOD_ID);
@@ -62,8 +67,6 @@ public final class Ae2SearchHistory {
     private static SearchHistoryStore store;
     private static int writeFailures;
     private static Path file;
-    private static int collapsedRows;
-    private static int visibleRows;
     /** ↑↓で選んだ行(入力に合う一覧の中の位置。-1 は選んでいない)。 */
     private static int selected = -1;
     /** 前に見た欄の値(変わったら選んだ行と先頭の位置を戻す)。 */
@@ -81,13 +84,13 @@ public final class Ae2SearchHistory {
     }
 
     public static void init(FeatureContext context) throws Exception {
-        // 件数は今は既定の値の定数。設定の画面(ClientSettings —— #12)が入った後に、そこへ載せる
-        collapsedRows = COLLAPSED_ROWS;
-        visibleRows = Math.max(collapsedRows, VISIBLE_ROWS);
-        int keep = KEEP;
+        Settings.client().register(COLLAPSED_ROWS);
+        Settings.client().register(VISIBLE_ROWS);
+        Settings.client().register(KEEP);
         file = FMLPaths.CONFIGDIR.get().resolve(GomacraftUtility.MOD_ID).resolve("search_history.json");
         try {
-            store = SearchHistoryStore.load(file, keep);
+            // 持つ件数は、設定を読む前の既定の値で読み、記すたびに今の設定の値へ合わせる(setMaxRecent)
+            store = SearchHistoryStore.load(file, KEEP.defaultValue());
         } catch (Exception e) {
             // 読めないファイルは上書きしない(人が直せるように残す)。この機能だけを止める
             throw new IllegalStateException("search history unreadable: " + FeatureRegistry.describe(e), e);
@@ -128,7 +131,11 @@ public final class Ae2SearchHistory {
     }
 
     private static void record(String text) {
-        if (store != null && store.record(player(), text)) {
+        if (store == null) {
+            return;
+        }
+        store.setMaxRecent(Settings.client().get(KEEP));
+        if (store.record(player(), text)) {
             save();
         }
     }
@@ -205,6 +212,8 @@ public final class Ae2SearchHistory {
             return null;
         }
         boolean typing = !field.getValue().isBlank();
+        int collapsedRows = Settings.client().get(COLLAPSED_ROWS);
+        int visibleRows = Math.max(collapsedRows, Settings.client().get(VISIBLE_ROWS));
         int count = typing || wide ? visibleRows : collapsedRows;
         boolean hint = wide;
         Font font = Minecraft.getInstance().font;
