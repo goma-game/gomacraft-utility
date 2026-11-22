@@ -29,6 +29,11 @@ public final class SearchFeatures {
     public static final String NATURESCOMPASS_SEARCH = "naturescompass_search";
     /** Explorer's Compass の検索で、英語名でも当たるようにする。 */
     public static final String EXPLORERSCOMPASS_SEARCH = "explorerscompass_search";
+    /**
+     * コンパス(Nature's / Explorer's)の検索語の履歴(AE2 の端末と同じ窓。帳は別)。それぞれのコンパスの検索の機能が
+     * 有効なコンパスだけに出す(欄はその機能の accessor で引く)。
+     */
+    public static final String COMPASS_SEARCH_HISTORY = "compass_search_history";
     /** mcjtylib の画面(RFTools 系・XNet など)の、英語で直に書かれた文言に訳を当てる差し込み口。 */
     public static final String MCJTYLIB_TEXT = "mcjtylib_text";
 
@@ -56,6 +61,9 @@ public final class SearchFeatures {
                         context -> gomacraft.utility.search.client.EnglishNames.install(context, NATURESCOMPASS_SEARCH)),
                 feature(EXPLORERSCOMPASS_SEARCH, List.of(Requirement.of("explorerscompass")),
                         context -> gomacraft.utility.search.client.EnglishNames.install(context, EXPLORERSCOMPASS_SEARCH)),
+                // 要る Mod は書かない(どちらかのコンパスがあれば出す —— 中で、有効なコンパスの検索の機能だけを使う)
+                feature(COMPASS_SEARCH_HISTORY, List.of(),
+                        context -> gomacraft.utility.search.client.CompassSearchHistory.init(context)),
                 feature(MCJTYLIB_TEXT, List.of(Requirement.of("mcjtylib")), context -> {
                 }));
     }
