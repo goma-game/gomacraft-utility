@@ -34,9 +34,9 @@
   "gomacraft_utility.feature.ttf_glyph_lock": "書体: TTF の読み込みの衝突を防ぐ",
   "gomacraft_utility.feature.screenshot_share": "スクショを Discord に投稿するボタン",
   "key.gomacraft_utility.ae2_fill_search": "マウスの下の品をAE2端末の検索欄へ送る",
-  "gomacraft_utility.search_history.hint": "左: 検索 / 右: 削除 / Shift+左・中: お気に入り",
+  "gomacraft_utility.search_history.hint": "左: 検索 / 右: 削除 / Shift+左・中: お気に入り / ホイール: 遡る",
   "gomacraft_utility.screenshot.button": "[Discord に投稿]",
-  "gomacraft_utility.screenshot.button.hover": "このスクショをあなたの名前で Discord に投稿します。%s を押しながら押すと投稿先を選べます。写っているチャットや名前もそのまま出ます(F1 で HUD を消して撮れます)。",
+  "gomacraft_utility.screenshot.button.hover": "このスクショをあなたの名前で Discord に投稿します。%s を押しながら押すと投稿先を選べます。",
   "gomacraft_utility.screenshot.choose.title": "このスクショをどこに投稿しますか?",
   "gomacraft_utility.screenshot.choose.chat": "チャットのチャンネル",
   "gomacraft_utility.screenshot.choose.screenshot": "スクショのチャンネル",
@@ -55,5 +55,8 @@
   "gomacraft_utility.screenshot.result.bad_image": "サーバがスクショを読めませんでした。",
   "gomacraft_utility.screenshot.result.spool_full": "投稿を待つスクショが溜まっています。しばらくしてからもう一度押してください。",
   "gomacraft_utility.screenshot.result.broken": "スクショを最後まで受け取れませんでした。もう一度押してください。",
-  "gomacraft_utility.screenshot.result.error": "サーバがスクショを保存できませんでした。"
+  "gomacraft_utility.screenshot.result.error": "サーバがスクショを保存できませんでした。",
+  "key.gomacraft_utility.ae2_copy_emi_search": "EMIの検索語をAE2端末の検索欄へ写す",
+  "gomacraft_utility.search_sync.on": "EMIとの検索の同期: 入(ダブルクリックで戻す)",
+  "gomacraft_utility.search_sync.off": "EMIとの検索の同期: 切(ダブルクリックで戻す)"
 }

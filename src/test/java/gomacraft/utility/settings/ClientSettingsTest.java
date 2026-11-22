@@ -41,6 +41,19 @@ class ClientSettingsTest {
     }
 
     @Test
+    void linesAfterAnUnreadableSectionAreNotReadAsThePreviousSection() {
+        ClientSettings s = settings();
+        s.parse("""
+                [emi_ae_quick_craft]
+                skip_confirm = false
+                [Other.Mod]
+                skip_confirm = true
+                """);
+        assertEquals(false, s.get(SKIP));
+        assertEquals(2, s.problems().size(), s.problems().toString());
+    }
+
+    @Test
     void readsWrittenValues() {
         ClientSettings s = settings();
         s.parse("""

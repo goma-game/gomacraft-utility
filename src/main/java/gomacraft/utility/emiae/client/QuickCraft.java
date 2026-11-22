@@ -114,8 +114,8 @@ public final class QuickCraft {
         if (KEY.isActiveAndMatches(key)) {
             return Gesture.QUICK;
         }
-        // Ctrl + 中クリックは EMI のチートの操作に残す
-        if (AMOUNT_KEY.isActiveAndMatches(key) && !Screen.hasControlDown()) {
+        // 修飾キー無しの割り当ては、Ctrl などを押している間は当たらない(Ctrl + 中クリックは EMI のチートに残る)
+        if (AMOUNT_KEY.isActiveAndMatches(key)) {
             return Gesture.AMOUNT;
         }
         return null;
@@ -138,6 +138,9 @@ public final class QuickCraft {
         boolean stored = entry != null && entry.getStoredAmount() > 0;
         boolean craftable = entry != null && entry.isCraftable();
 
+        // 前の Alt + クリックの待ち(数の画面へ数を入れて確定する)を捨てる。残すと、この操作で開いた数の画面へ
+        // 前の数が入って確定してしまう
+        pending = null;
         if (gesture == Gesture.AMOUNT) {
             if (craftable) {
                 // AE2 の端末の中クリックと同じ: 数の画面 → 確定で計画の画面
