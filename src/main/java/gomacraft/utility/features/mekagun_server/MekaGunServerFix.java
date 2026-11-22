@@ -12,12 +12,17 @@ import java.util.List;
  * クライアントのクラスが無いので、最初に撃った時点で {@code NoClassDefFoundError} になる(上流
  * omeranha/MekaWeapons#57。上流の 6871500 で直ったが、CurseForge の版はまだ出ていない)。
  *
- * <p>直し方: 専用サーバでだけ(mixin の {@code server} の一覧)、その 3 つの呼び出しを外す。どれもサーバでは
- * 意味の無い呼び出しである(ビームの表示はクライアントの描画、音は撃った本人のクライアントが自分の
- * {@code onUseTick} で鳴らす)。当たり判定と傷はサーバの処理のまま残る。
+ * <p>直し方: 専用サーバでだけ(mixin の {@code server} の一覧。{@link #serverOnly})、その 3 つの呼び出しを外す。
+ * <ul>
+ *   <li>{@code BeamManager.setBeam}・{@code removeBeam}: 4.3 は {@code !level.isClientSide()} の側(サーバ)でしか
+ *       呼ばない。描画はクライアントの表を読むので、専用サーバの上で書いた表は、もともと誰の画面にも届いていない
+ *       (専用サーバでは、直す前からビームは誰にも見えない —— 外して失うものは無い)。</li>
+ *   <li>{@code SoundHandler.playSound}: 撃った本人のクライアントが、自分の側の {@code onUseTick} で鳴らす。</li>
+ * </ul>
+ * 当たり判定・傷・エネルギー・熱は、サーバの処理のまま残る(外すのは呼び出しの命令だけ)。
  *
- * <p>⚠ 版は 4.3 だけに縛る。上流が直した版が出て台帳の版が上がれば、この機能は {@code off(version …)} になって
- * 自分で止まる(直した版では当て先の呼び出しが無いので、当て続けると FAILED になる)。
+ * <p>⚠ 版の幅は {@code [4.3,)}(fail-closed)。直っていない新しい版が出ても効き続け、上流が直して当て先の呼び出しが
+ * 消えたら、当て損ねで FAILED になって赤く知らせる(黙って off にならない)。赤くなったら、この機能を外す。
  */
 public final class MekaGunServerFix implements Feature {
     public static final String ID = "mekagun_server";
@@ -29,6 +34,11 @@ public final class MekaGunServerFix implements Feature {
 
     @Override
     public List<Requirement> requirements() {
-        return List.of(Requirement.of("mekaweapons", "[4.3]"));
+        return List.of(Requirement.of("mekaweapons", "[4.3,)"));
+    }
+
+    @Override
+    public boolean serverOnly() {
+        return true;
     }
 }

@@ -14,10 +14,17 @@ import org.spongepowered.asm.mixin.injection.Redirect;
  *
  * <p>当て先は文字列で書く(MekaWeapons は組み立ての依存に入れない)。呼び出しの形は 4.3 の jar を
  * javap で読んで写した。
+ *
+ * <p>⚠ 中身は空なので {@code Features.guard} で包まない。包む理由(例外を投げた機能を FAILED にして以後止める)は、
+ * 何かを走らせる中身にだけ当たる。空の中身は投げようが無く、機能が FAILED になった後も、外した呼び出しを
+ * 戻す(=専用サーバで落とす)ほうが悪い。
  */
 @Mixin(targets = "meranha.mekaweapons.items.ItemMekaGun")
 public abstract class ItemMekaGunMixin {
-    /** ビームの表示の登録(クライアントの描画が読む表。サーバで書いても誰にも届かない)。 */
+    /**
+     * ビームの表示の登録。4.3 はサーバの側でしか呼ばず、描画はクライアントの側の表を読むので、専用サーバの上の
+     * 表は、直す前から誰の画面にも届いていない。
+     */
     @Group(name = "gomacraft_utility$mekagun_server$set_beam", min = 1)
     @Redirect(
             method = "onUseTick",
