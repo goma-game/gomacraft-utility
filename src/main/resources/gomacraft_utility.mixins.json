@@ -9,6 +9,8 @@
     "selftest_at.SelftestAtMixin",
     "selftest_missing_class.SelftestMissingClassMixin"
   ],
-  "client": [],
+  "client": [
+    "emi_ae_stock.EmiScreenSpaceMixin"
+  ],
   "server": []
 }

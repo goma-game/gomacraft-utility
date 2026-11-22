@@ -37,13 +37,24 @@ public final class FeatureRegistry {
     /** 機能の一覧の状態を決める(Minecraft に依らない。試験はここを見る)。 */
     public static FeatureRegistry evaluate(
             List<? extends Feature> features, ModLookup mods, FeatureConfig config, Consumer<String> sink) {
+        return evaluate(features, mods, config, sink, false);
+    }
+
+    /** {@code dedicatedServer} が真なら、画面にだけ効く機能({@link Feature#clientOnly})を切る。 */
+    public static FeatureRegistry evaluate(
+            List<? extends Feature> features, ModLookup mods, FeatureConfig config, Consumer<String> sink,
+            boolean dedicatedServer) {
         Set<String> seen = new HashSet<>();
         Map<String, FeatureStatus> statuses = new LinkedHashMap<>();
         for (Feature f : features) {
             if (!ID.matcher(f.id()).matches() || !seen.add(f.id())) {
                 throw new IllegalArgumentException("機能の名前が不正か重なっている: " + f.id());
             }
-            statuses.put(f.id(), decide(f, mods, config));
+            FeatureStatus status = decide(f, mods, config);
+            if (dedicatedServer && f.clientOnly() && status.state() == FeatureState.ON) {
+                status = new FeatureStatus(f.id(), FeatureState.OFF, "client only");
+            }
+            statuses.put(f.id(), status);
         }
         return new FeatureRegistry(List.copyOf(features), statuses, sink);
     }
