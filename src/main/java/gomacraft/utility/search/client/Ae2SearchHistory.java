@@ -5,7 +5,7 @@ import gomacraft.utility.Features;
 import gomacraft.utility.feature.FeatureContext;
 import gomacraft.utility.mixin.ae2_search_history.MEStorageScreenHistoryAccessor;
 import gomacraft.utility.search.SearchFeatures;
-import gomacraft.utility.settings.ClientSettings;
+import gomacraft.utility.search.SearchHistorySettings;
 import gomacraft.utility.settings.Settings;
 import java.util.List;
 import net.minecraft.client.gui.components.EditBox;
@@ -26,16 +26,6 @@ import net.neoforged.neoforge.common.NeoForge;
  * </ul>
  */
 public final class Ae2SearchHistory {
-    /** 欄が空でホバーしていないときに出す件数(設定の画面で変えられる。すぐ効く)。 */
-    public static final ClientSettings.Int COLLAPSED_ROWS =
-            new ClientSettings.Int(SearchFeatures.AE2_SEARCH_HISTORY, "collapsed_rows", 3, 1, 20);
-    /** 広げたとき(ホバー・入力中)に一度に出す件数。それより古いものはホイールで遡る。 */
-    public static final ClientSettings.Int VISIBLE_ROWS =
-            new ClientSettings.Int(SearchFeatures.AE2_SEARCH_HISTORY, "visible_rows", 10, 1, 30);
-    /** 持つ件数(お気に入りは数えない。古いものから消す)。 */
-    public static final ClientSettings.Int KEEP =
-            new ClientSettings.Int(SearchFeatures.AE2_SEARCH_HISTORY, "keep", 100, 10, 1000);
-
     private static SearchHistoryOverlay overlay;
     /** 前の tick に EMI の検索欄に focus があったか。 */
     private static boolean emiFocused;
@@ -44,9 +34,9 @@ public final class Ae2SearchHistory {
     }
 
     public static void init(FeatureContext context) throws Exception {
-        Settings.client().register(COLLAPSED_ROWS);
-        Settings.client().register(VISIBLE_ROWS);
-        Settings.client().register(KEEP);
+        Settings.client().register(SearchHistorySettings.COLLAPSED_ROWS);
+        Settings.client().register(SearchHistorySettings.VISIBLE_ROWS);
+        Settings.client().register(SearchHistorySettings.KEEP);
         SearchHistoryOverlay.loadStore();
         overlay = new SearchHistoryOverlay(SearchFeatures.AE2_SEARCH_HISTORY, "", List.of(new SearchHistoryOverlay.Host() {
             @Override

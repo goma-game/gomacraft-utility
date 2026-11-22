@@ -3,6 +3,7 @@ package gomacraft.utility.search.client;
 import gomacraft.utility.Features;
 import gomacraft.utility.GomacraftUtility;
 import gomacraft.utility.feature.FeatureRegistry;
+import gomacraft.utility.search.SearchHistorySettings;
 import gomacraft.utility.search.SearchHistoryStore;
 import gomacraft.utility.settings.Settings;
 import java.nio.file.Path;
@@ -58,11 +59,12 @@ public final class SearchHistoryOverlay {
     // ファイルは 1 つ(窓が 2 つあっても同じ帳を読み書きする)
     private static SearchHistoryStore store;
     private static Path file;
-    private static int writeFailures;
 
     private final String feature;
     private final String scope;
     private final List<Host> hosts;
+    /** 続けて書けなかった回数(窓ごと —— FAILED にするのは、書こうとした窓の機能だけ)。 */
+    private int writeFailures;
     /** ↑↓で選んだ行(入力に合う一覧の中の位置。-1 は選んでいない)。 */
     private int selected = -1;
     /** 前に見た欄の値(変わったら選んだ行と先頭の位置を戻す)。 */
@@ -86,11 +88,11 @@ public final class SearchHistoryOverlay {
 
     /** 出す件数(設定の画面の値。すぐ効く —— 件数の設定は AE2 の端末の履歴の機能のもので、コンパスも同じ値を使う)。 */
     private static int collapsedRows() {
-        return Settings.client().get(Ae2SearchHistory.COLLAPSED_ROWS);
+        return Settings.client().get(SearchHistorySettings.COLLAPSED_ROWS);
     }
 
     private static int visibleRows() {
-        return Math.max(collapsedRows(), Settings.client().get(Ae2SearchHistory.VISIBLE_ROWS));
+        return Math.max(collapsedRows(), Settings.client().get(SearchHistorySettings.VISIBLE_ROWS));
     }
 
     /** 履歴のファイルを読む(1 回だけ。読めないファイルは上書きせずに、呼んだ機能を止める)。 */
@@ -100,8 +102,9 @@ public final class SearchHistoryOverlay {
         }
         file = FMLPaths.CONFIGDIR.get().resolve(GomacraftUtility.MOD_ID).resolve("search_history.json");
         try {
-            // 持つ件数は、設定を読む前の既定の値で読み、記すたびに今の設定の値へ合わせる(setMaxRecent)
-            store = SearchHistoryStore.load(file, Ae2SearchHistory.KEEP.defaultValue());
+            // ⚠ 読むときは持つ件数の上限で読む(既定の 100 で読むと、100 より大きくした設定でも起動のたびに 100 件へ
+            // 切られる —— #21 のレビュー)。記すたびに今の設定の値へ合わせる(setMaxRecent)
+            store = SearchHistoryStore.load(file, SearchHistorySettings.KEEP.max());
         } catch (Exception e) {
             throw new IllegalStateException("search history unreadable: " + FeatureRegistry.describe(e), e);
         }
@@ -156,7 +159,7 @@ public final class SearchHistoryOverlay {
         if (store == null) {
             return;
         }
-        store.setMaxRecent(Settings.client().get(Ae2SearchHistory.KEEP));
+        store.setMaxRecent(Settings.client().get(SearchHistorySettings.KEEP));
         if (store.record(player(), text)) {
             save();
         }
@@ -166,7 +169,7 @@ public final class SearchHistoryOverlay {
      * 書く。一時の失敗(ほかの道具がファイルを掴んでいる、など)は、続けて {@link #MAX_WRITE_FAILURES} 回までは警告だけに
      * して次の変化で書き直す(履歴は手元の覚えにあるので失わない)。続けて越えたら、呼んだ機能を FAILED にする。
      */
-    private static void save() {
+    private void save() {
         try {
             store.save(file);
             writeFailures = 0;
@@ -232,8 +235,11 @@ public final class SearchHistoryOverlay {
         int room = (field.getY() - 1 - PAD * 2 - (hint ? ROW : 0)) / ROW;
         boolean container = screen instanceof AbstractContainerScreen<?>;
         int leftEdge = screen instanceof AbstractContainerScreen<?> c ? c.getGuiLeft() - SIDE_GAP : 0;
-        boolean upward = room >= Math.min(count, 3) || (container && leftEdge < MIN_SIDE_WIDTH);
         int belowTop = field.getY() + field.getHeight() + 1;
+        int belowRoom = (screen.height - belowTop - PAD * 2 - (hint ? ROW : 0)) / ROW;
+        // 端末でない画面は、上が狭くても、下の空きの方が狭ければ上に出す(#21 のレビュー)
+        boolean upward = room >= Math.min(count, 3) || (container && leftEdge < MIN_SIDE_WIDTH)
+                || (!container && belowRoom <= room);
         if (upward) {
             count = Math.max(1, Math.min(count, room));
         } else {
