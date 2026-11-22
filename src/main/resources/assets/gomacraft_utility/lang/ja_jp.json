@@ -34,6 +34,8 @@
   "gomacraft_utility.feature.emi_ae_grid_craft": "EMI: パターンの無い品を作業台のレシピで作る",
   "gomacraft_utility.feature.ae_stock_query": "AE: 端末を閉じていても在庫数を問い合わせる",
   "gomacraft_utility.feature.ttf_glyph_lock": "書体: TTF の読み込みの衝突を防ぐ",
+  "gomacraft_utility.feature.ae2_repo_sort_cache": "AE2: 一覧の並べ替えの鍵を作り置いて軽くする",
+  "gomacraft_utility.feature.ae2_repo_update_batch": "AE2: 届いた在庫の並べ直しを 1 回にまとめる",
   "gomacraft_utility.feature.screenshot_share": "スクショを Discord に投稿するボタン",
   "key.gomacraft_utility.ae2_fill_search": "マウスの下の品をAE2端末の検索欄へ送る",
   "gomacraft_utility.search_history.hint": "左: 検索 / 右: 削除 / Shift+左・中: お気に入り / ホイール: 遡る",

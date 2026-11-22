@@ -34,6 +34,8 @@
   "gomacraft_utility.feature.emi_ae_grid_craft": "EMI: craft pattern-less items with the crafting grid",
   "gomacraft_utility.feature.ae_stock_query": "AE: ask stock counts with the terminal closed",
   "gomacraft_utility.feature.ttf_glyph_lock": "Fonts: prevent TTF loading races",
+  "gomacraft_utility.feature.ae2_repo_sort_cache": "AE2: cache sort keys of the terminal list",
+  "gomacraft_utility.feature.ae2_repo_update_batch": "AE2: re-sort the terminal list once per batch of updates",
   "gomacraft_utility.feature.screenshot_share": "Post screenshots to Discord button",
   "key.gomacraft_utility.ae2_fill_search": "Send hovered item to AE2 terminal search",
   "gomacraft_utility.search_history.hint": "Left: search / Right: delete / Shift+Left or Middle: favorite / Wheel: older",
