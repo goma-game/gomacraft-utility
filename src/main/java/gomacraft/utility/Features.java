@@ -6,6 +6,7 @@ import gomacraft.utility.feature.FeatureConfig;
 import gomacraft.utility.feature.FeatureRegistry;
 import java.util.ArrayList;
 import java.util.List;
+import gomacraft.utility.search.SearchFeatures;
 import java.util.Set;
 import java.util.function.Supplier;
 import net.neoforged.fml.loading.FMLEnvironment;
@@ -39,6 +40,8 @@ public final class Features {
     /** 機能の一覧。 */
     public static List<Feature> catalog(boolean selftest) {
         List<Feature> features = new ArrayList<>();
+        // 段 1(検索まわり): goma-org/gomabase#2295。どれも画面の機能(clientOnly)で、専用サーバでは off
+        features.addAll(SearchFeatures.all());
         // 段 2(EMI と AE2): goma-org/gomabase#2295
         features.addAll(EmiAeFeatures.all());
         if (selftest) {

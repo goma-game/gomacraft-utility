@@ -11,7 +11,15 @@
   ],
   "client": [
     "emi_ae_stock.EmiScreenSpaceMixin",
-    "emi_ae_quick_craft.EmiScreenManagerMixin"
+    "emi_ae_quick_craft.EmiScreenManagerMixin",
+    "ae2_english_search.NameSearchPredicateMixin",
+    "ae2_english_search.PatternAccessTermScreenMixin",
+    "ae2_search_key.MEStorageScreenKeyAccessor",
+    "ae2_search_history.MEStorageScreenHistoryAccessor",
+    "naturescompass_search.NaturesCompassScreenMixin",
+    "explorerscompass_search.ExplorersCompassScreenMixin",
+    "mcjtylib_text.AbstractLabelMixin",
+    "mcjtylib_text.WindowMixin"
   ],
   "server": []
 }
