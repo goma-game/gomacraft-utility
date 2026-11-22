@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  */
 @Mixin(PlayerList.class)
 public abstract class SelftestAtMixin {
-    @Group(name = "gomacraft_utility$selftest_at", min = 1)
+    @Group(name = "gomacraft_utility$selftest_at$tick", min = 1)
     @Inject(
             method = "tick",
             at = @At(value = "INVOKE", target = "Lgomacraft/utility/selftest/NoSuch;nothing()V"),

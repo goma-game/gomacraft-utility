@@ -38,7 +38,10 @@
   - 手元に JDK 21 が無ければ、Docker の `gradle:<版>-jdk21` の箱で `./gradlew build runGameTestServer` を回す(手元の JDK は 21 と限らない)。
 - 機能の足し方:
   - `Feature` を実装して `Features.catalog` に足す。mixin は `gomacraft.utility.mixin.<機能の名前>` の包みに置いて `gomacraft_utility.mixins.json` に並べる。
-  - injector(`@Inject`・`@Redirect`・`@ModifyArg` など)は全部 `require = 0` と `@Group(name = "gomacraft_utility$<機能>", min = 1)` で書く。`require` の不足は Mixin が Error を投げて起動ごと止まり、この Mod では拾えない。group の不足は、その機能だけの FAILED に落とせる。L1 の `MixinContractTest` が書き忘れを落とす。
+  - injector(`@Inject`・`@Redirect`・`@ModifyArg`、MixinExtras の `@WrapOperation` など)は全部 `require = 0` と `@Group(name = "gomacraft_utility$<機能>$<injector の名前>", min = 1)` で書く。group の名前は injector ごとに分ける。
+    - `require` の不足は Mixin が Error を投げて起動ごと止まり、この Mod では拾えない。group の不足は、その機能だけの FAILED に落とせる。
+    - group は中の成功を合計で数えるので、2 つの injector で共有すると、片方が当て損ねても `on` のままになる。
+    - L1 の `MixinContractTest` が、書き忘れと group の名前の重なりを落とす。mixin と MixinExtras の注釈は、`@At`・`@Slice`・`@Group` などの決まった部品を除いて、全部 injector として見る(知らない注釈を素通りさせない)。
   - mixin の中身と event の listener は `Features.guard("<機能>", () -> …)` で包む。有効でない機能は走らず、例外を投げた機能は FAILED になって、以後はその機能のどの部分も走らない(FAILED の機能の、当たってしまった残りの mixin を止める)。
   - 当て先のクラスは、起動時の 1 行の前に読み込ませる(`GomacraftMixinPlugin.preloadTargets`。初期化はしない)。クラスを読み込んだだけで副作用のあるものに当てるなら、先にここで困らないかを確かめる。
   - 通信を足すときは payload を全部 `optional()` にし、送る前に相手がその channel を持つかを確かめる(`hasChannel`。この Mod の無い相手もいる)。

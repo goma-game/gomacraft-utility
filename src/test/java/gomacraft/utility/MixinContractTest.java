@@ -32,10 +32,31 @@ import org.objectweb.asm.tree.MethodNode;
  */
 class MixinContractTest {
     private static final String INJECTION = "Lorg/spongepowered/asm/mixin/injection/";
-    private static final Set<String> INJECTORS = Set.of(
-            INJECTION + "Inject;", INJECTION + "Redirect;", INJECTION + "ModifyArg;",
-            INJECTION + "ModifyArgs;", INJECTION + "ModifyVariable;", INJECTION + "ModifyConstant;");
+    private static final String MIXINEXTRAS = "Lcom/llamalad7/mixinextras/";
     private static final String GROUP = INJECTION + "Group;";
+    /**
+     * injector でない、決まった部品(当て先の書き方・group・代わりのメソッド・MixinExtras の式)。
+     * ⚠ これ以外の mixin と MixinExtras の注釈は、全部 injector として見る(実行時は MixinExtras も載るので、
+     * 名前を並べて injector を決めると {@code @WrapOperation} などが素通りし、黙って当たらない)。
+     */
+    private static final Set<String> NOT_INJECTORS = Set.of(
+            GROUP, INJECTION + "At;", INJECTION + "Slice;", INJECTION + "Desc;", INJECTION + "Surrogate;",
+            INJECTION + "Coerce;", INJECTION + "Constant;",
+            MIXINEXTRAS + "expression/Expression;", MIXINEXTRAS + "expression/Definition;",
+            MIXINEXTRAS + "expression/Definitions;");
+
+    static boolean isInjector(String desc) {
+        return (desc.startsWith(INJECTION) || desc.startsWith(MIXINEXTRAS)) && !NOT_INJECTORS.contains(desc);
+    }
+
+    @Test
+    void injectorsAreRecognisedFailClosed() {
+        assertTrue(isInjector(INJECTION + "Inject;"));
+        assertTrue(isInjector(MIXINEXTRAS + "injector/wrapoperation/WrapOperation;"));
+        assertTrue(isInjector(MIXINEXTRAS + "injector/SomethingNewer;"), "知らない注釈は injector として見る");
+        assertTrue(!isInjector(GROUP) && !isInjector(INJECTION + "At;"));
+        assertTrue(!isInjector("Lorg/spongepowered/asm/mixin/Shadow;"));
+    }
 
     @Test
     void everyInjectorHasRequireZeroAndAGroup() throws Exception {
@@ -54,6 +75,7 @@ class MixinContractTest {
             }
         }
         int injectors = 0;
+        java.util.Map<String, String> groups = new java.util.HashMap<>();
         for (String name : names) {
             assertNotNull(GomacraftMixinPlugin.featureOf(name), "機能の包みに無い mixin: " + name);
             ClassNode node = new ClassNode();
@@ -71,7 +93,7 @@ class MixinContractTest {
                 }
                 AnnotationNode group = annotations.stream().filter(a -> a.desc.equals(GROUP)).findFirst().orElse(null);
                 for (AnnotationNode injector : annotations) {
-                    if (!INJECTORS.contains(injector.desc)) {
+                    if (!isInjector(injector.desc)) {
                         continue;
                     }
                     injectors++;
@@ -82,6 +104,9 @@ class MixinContractTest {
                     assertTrue(min instanceof Integer m && m >= 1, where + ": @Group の min が 1 以上でない");
                     Object groupName = value(group, "name");
                     assertTrue(groupName instanceof String s && !s.isEmpty(), where + ": @Group に名前が無い");
+                    // group は中の成功を合計で数える。共有すると片方の当て損ねが見えないので、injector ごとに分ける
+                    String previous = groups.put((String) groupName, where);
+                    assertTrue(previous == null, where + ": @Group の名前 " + groupName + " を " + previous + " と共有している");
                 }
             }
         }
