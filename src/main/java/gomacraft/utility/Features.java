@@ -47,6 +47,8 @@ public final class Features {
         features.addAll(EmiAeFeatures.all());
         // 段 3(動作まわり): goma-org/gomabase#2295。専用サーバでだけ当てる直し
         features.add(new gomacraft.utility.features.mekagun_server.MekaGunServerFix());
+        // 本番の重さ(goma-org/gomabase#2333): EnderDrives の代表のセルの答えを同じ tick の中で使い回す。専用サーバだけ
+        features.add(new gomacraft.utility.features.enderdrives_primary_cache.EnderDrivesPrimaryCache());
         // 段 3(重さと見た目): goma-org/gomabase#2295。TTF のグリフの読み込みを FreeType の lock で並べる
         features.add(new gomacraft.utility.features.ttf_glyph_lock.TtfGlyphLock());
         // 段 3(重さ): goma-org/gomabase#2295。AE2 の端末の一覧の並べ直しを軽くする。鍵の作り置きと、並べ直しのまとめ

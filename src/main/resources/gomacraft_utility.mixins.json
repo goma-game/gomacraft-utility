@@ -34,6 +34,9 @@
     "ae2_repo_update_batch.RepoUpdateBatchMixin"
   ],
   "server": [
-    "mekagun_server.ItemMekaGunMixin"
+    "mekagun_server.ItemMekaGunMixin",
+    "enderdrives_primary_cache.DuplicateCellGuardMixin",
+    "enderdrives_primary_cache.GridMixin",
+    "enderdrives_primary_cache.DriveBlockEntityMixin"
   ]
 }
