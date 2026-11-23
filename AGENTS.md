@@ -1,6 +1,8 @@
 # gomacraft-utility エージェント向け作業規則
 
-共通の規則(応答・Issue 駆動・エージェントの構成・作業の心得・PR とマージの流れ)は GitHome の `AGENTS.md` が正。ここにはこのリポジトリ固有のことだけを書く。
+共通の規則(応答・Issue 駆動・作業の心得・PR とマージの流れ)は GitHome の `AGENTS.md` と続きの `.agents/AGENTS.md`、Claude Code のエージェントの構成は GitHome の `.claude/claude-only.md` が正。ここにはこのリポジトリ固有のことだけを書く。
+
+全体の規則は、持ち主の非公開の作業場のリポジトリ(手元ではこのリポジトリの親)が持つ。このリポジトリだけを開いたセッション(作業場を一緒に開いていない clone や、規則をこのリポジトリの根までしか読まないエージェント)には、その規則・スキル・入口が届かないので、作業の前にそちらの規則を読む。
 
 ## このリポジトリの位置づけ
 
@@ -32,7 +34,7 @@
 - main へ直接コミットしない。`.githooks/pre-commit` が拒否する。クラウドのセッションでは `.githooks/pre-push` が既定の枝と production への push・強制 push・ref の削除などを断る(断る範囲の正は `.githooks/pre-push` の冒頭。中身は GitHome の `.githooks/pre-push` と同じで、直すときは GitHome から全リポジトリへ)。
   - 新しい clone では `git config core.hooksPath .githooks` が要る。
 - `.claude/settings.json` と `.claude/hooks/cloud-session-start.sh` は、ほかの作業リポジトリと同じ中身で置く(揃いは GitHome の検査が見る。ここだけ直さない)。
-- 検査の正は CI(流れの正は GitHome の `AGENTS.md`「仕事の進め方」)。手元では変更したところの速い検査だけ回す。
+- 検査の正は CI(流れの正は GitHome の `.agents/AGENTS.md`「仕事の進め方」)。手元では変更したところの速い検査だけ回す。
   - CI(`.github/workflows/build.yml`)は、組み立てと JUnit・配る jar の中身・起動の自己検査(gametest のサーバ)を回す。何を確かめるかの正は `.github/scripts/check-build.sh`。
   - 起動の自己検査は、わざと壊した機能(`Features.SELFTEST_FEATURES`。自己検査のときだけ一覧に入る)の mixin が当て損ねても、それぞれの機能だけが FAILED になって起動が続き、最初の 1 行に間に合うことを見る。壊し方は 3 つ(当て先のメソッドが無い・`@At` が合わない・当て先のクラスが無い)。機能の枠(`gomacraft.utility.feature`・`mixinsupport`)を変えたら、ここが落ちないことを確かめる。
   - 手元に JDK 21 が無ければ、Docker の `gradle:<版>-jdk21` の箱で `./gradlew build runGameTestServer` を回す(手元の JDK は 21 と限らない)。
