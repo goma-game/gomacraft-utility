@@ -25,4 +25,14 @@ public abstract class GridMixin {
     private void gomacraftUtility$onRemove(CallbackInfo ci) {
         EnderDrivesPrimaryCache.invalidate();
     }
+
+    /**
+     * 外し終えた後にも捨てる。HEAD だけでは、各 service が機械の一覧から外す({@code removeNode})より先に走り、その間の
+     * 問いで外れる前の一覧から作った答えを覚えうる窓が残る。
+     */
+    @Group(name = "gomacraft_utility$enderdrives_primary_cache$grid_remove_return", min = 1)
+    @Inject(method = "remove", at = @At("RETURN"), require = 0)
+    private void gomacraftUtility$afterRemove(CallbackInfo ci) {
+        EnderDrivesPrimaryCache.invalidate();
+    }
 }

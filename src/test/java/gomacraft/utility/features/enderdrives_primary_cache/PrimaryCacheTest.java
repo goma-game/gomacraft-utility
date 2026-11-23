@@ -4,6 +4,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 
@@ -32,27 +34,56 @@ class PrimaryCacheTest {
         assertEquals(Boolean.FALSE, c.get(a, 5), "捨てた後に覚え直した答えは使う");
     }
 
+    /**
+     * mixin の道(頭で {@code hit}・全部を数えた後で {@code remember})をそのまま回す: 元の isPrimary の代わりに、数え直しの
+     * 回数と、重なりの印の付け方を数える。
+     */
+    private static boolean isPrimary(PrimaryCacheLogic logic, Object cell, List<Boolean> marks,
+            AtomicInteger recounts, boolean original) {
+        Boolean hit = logic.hit(cell, marks::add);
+        if (hit != null) {
+            return hit;
+        }
+        recounts.incrementAndGet();
+        // 元の処理: 全部を数えた後に印を付けて返す(ここを mixin の TAIL が覚える)
+        marks.add(!original);
+        logic.remember(cell, original);
+        return original;
+    }
+
     @Test
-    void theCachedAnswerEqualsTheOriginalAndSavesRecounts() {
-        // 元の答え(数え直し)を数えて、同じ tick の 2 回目からは呼ばれず、答えが同じこと
-        AtomicInteger recounts = new AtomicInteger();
+    void theMixinPathReturnsTheOriginalAnswerAndMarksLikeTheOriginal() {
+        long[] tick = {7};
+        PrimaryCacheLogic logic = new PrimaryCacheLogic(new PrimaryCache(), () -> tick[0]);
         Object cell = new Object();
-        EnderDrivesPrimaryCache.CACHE.invalidate();
+        List<Boolean> marks = new ArrayList<>();
+        AtomicInteger recounts = new AtomicInteger();
         for (int i = 0; i < 50; i++) {
-            boolean answer = EnderDrivesPrimaryCache.answer(cell, 7, () -> {
-                recounts.incrementAndGet();
-                return false;
-            });
-            assertEquals(false, answer);
+            assertEquals(false, isPrimary(logic, cell, marks, recounts, false));
         }
         assertEquals(1, recounts.get(), "同じ tick で数え直した");
-        // ドライブが変わった(捨てる時点): 次の問いで数え直し、新しい答えになる
-        EnderDrivesPrimaryCache.CACHE.invalidate();
-        assertEquals(true, EnderDrivesPrimaryCache.answer(cell, 7, () -> {
-            recounts.incrementAndGet();
-            return true;
-        }));
+        // 当たったときも、元と同じ印(代表でない = 重なり true)を毎回付け直す
+        assertEquals(50, marks.size());
+        assertTrue(marks.stream().allMatch(m -> m), marks.toString());
+        // ドライブが変わった(捨てる時点): 同じ tick でも数え直し、新しい答えになる
+        logic.invalidate();
+        assertEquals(true, isPrimary(logic, cell, marks, recounts, true));
         assertEquals(2, recounts.get());
+        assertEquals(false, marks.get(marks.size() - 1));
+        // 次の tick は数え直す
+        tick[0] = 8;
+        isPrimary(logic, cell, marks, recounts, true);
+        assertEquals(3, recounts.get());
+    }
+
+    @Test
+    void offTheServerThreadNothingIsRememberedOrReturned() {
+        PrimaryCacheLogic logic = new PrimaryCacheLogic(new PrimaryCache(), () -> -1);
+        Object cell = new Object();
+        logic.remember(cell, true);
+        List<Boolean> marks = new ArrayList<>();
+        assertNull(logic.hit(cell, marks::add));
+        assertTrue(marks.isEmpty(), "当たっていないのに印に触った");
     }
 
     @Test

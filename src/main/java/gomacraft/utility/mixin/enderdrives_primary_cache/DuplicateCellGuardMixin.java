@@ -20,16 +20,18 @@ public abstract class DuplicateCellGuardMixin {
     @Group(name = "gomacraft_utility$enderdrives_primary_cache$is_primary_head", min = 1)
     @Inject(method = "isPrimary", at = @At("HEAD"), cancellable = true, require = 0)
     private static void gomacraftUtility$cachedPrimary(DeduplicatedEnderCell cell, CallbackInfoReturnable<Boolean> cir) {
-        Boolean hit = EnderDrivesPrimaryCache.cached(cell);
+        Boolean hit = EnderDrivesPrimaryCache.hit(cell, cell::enderdrives$setDuplicateOnGrid);
         if (hit != null) {
-            cell.enderdrives$setDuplicateOnGrid(!hit);
             cir.setReturnValue(hit);
         }
     }
 
-    /** 数え直した答えを覚える。 */
-    @Group(name = "gomacraft_utility$enderdrives_primary_cache$is_primary_return", min = 1)
-    @Inject(method = "isPrimary", at = @At("RETURN"), require = 0)
+    /**
+     * 全部を数えた後の返り(メソッドの最後の返り)の答えだけを覚える。早い返りの道(ドライブがつながっていない・grid が
+     * 無いなど)は、元の処理が重なりの印に触らないので覚えない(当たったときの印の付け直しが元と食い違わないように)。
+     */
+    @Group(name = "gomacraft_utility$enderdrives_primary_cache$is_primary_tail", min = 1)
+    @Inject(method = "isPrimary", at = @At("TAIL"), require = 0)
     private static void gomacraftUtility$rememberPrimary(DeduplicatedEnderCell cell, CallbackInfoReturnable<Boolean> cir) {
         EnderDrivesPrimaryCache.remember(cell, cir.getReturnValueZ());
     }
