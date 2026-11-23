@@ -12,6 +12,7 @@
   "client": [
     "emi_ae_stock.EmiScreenSpaceMixin",
     "emi_ae_quick_craft.EmiScreenManagerMixin",
+    "emi_search_history.EmiScreenManagerHistoryMixin",
     "ae2_english_search.NameSearchPredicateMixin",
     "ae2_english_search.PatternAccessTermScreenMixin",
     "ae2_search_key.MEStorageScreenKeyAccessor",

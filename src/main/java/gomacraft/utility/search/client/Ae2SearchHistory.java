@@ -1,26 +1,29 @@
 package gomacraft.utility.search.client;
 
 import appeng.client.gui.me.common.MEStorageScreen;
+import appeng.client.gui.widgets.AETextField;
 import gomacraft.utility.Features;
 import gomacraft.utility.feature.FeatureContext;
 import gomacraft.utility.mixin.ae2_search_history.MEStorageScreenHistoryAccessor;
+import gomacraft.utility.search.HistoryLayout;
 import gomacraft.utility.search.SearchFeatures;
 import gomacraft.utility.search.SearchHistorySettings;
 import gomacraft.utility.settings.Settings;
 import java.util.List;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.Rect2i;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
- * AE2 の端末の検索語の履歴(goma-org/gomabase#2295)。窓の形と操作は {@link SearchHistoryOverlay}(コンパスと共通)。
+ * AE2 の端末の検索語の履歴(goma-org/gomabase#2295)。ウィンドウの形と操作は {@link SearchHistoryOverlay}(コンパスと共通)。
  *
  * <ul>
  *   <li>出す件数(空のとき・広げたとき)と持つ件数は設定の画面({@code ClientSettings}。既定は 3・10・100)で変えられ、
  *       すぐ効く(持つ件数は次に記すときから)。コンパスの履歴も同じ値を使う。</li>
- *   <li>記すのは、窓の決まり(Enter・欄の外・閉じたとき)に加えて、F キーで送ったときと、EMI の検索欄から focus が
+ *   <li>記すのは、ウィンドウの決まり(Enter・欄の外・閉じたとき)に加えて、F キーで送ったときと、EMI の検索欄から focus が
  *       外れたとき(AE2 と EMI の履歴を 1 つにする)。</li>
  *   <li>帳はプレイヤーの帳そのまま(前からの履歴を引き継ぐ)。</li>
  * </ul>
@@ -47,6 +50,18 @@ public final class Ae2SearchHistory {
             @Override
             public void apply(Screen screen, EditBox field, String text) {
                 Ae2Search.apply(field, text);
+            }
+
+            @Override
+            public HistoryLayout.Mode mode() {
+                return HistoryLayout.Mode.TERMINAL;
+            }
+
+            @Override
+            public HistoryLayout.Rect bounds(EditBox field) {
+                // AE2 の欄の見た目の枠(字の位置より 2 ずつ外。AETextField#getTooltipArea)
+                Rect2i area = ((AETextField) field).getTooltipArea();
+                return new HistoryLayout.Rect(area.getX(), area.getY(), area.getWidth(), area.getHeight());
             }
         }));
         overlay.register();
@@ -77,6 +92,11 @@ public final class Ae2SearchHistory {
 
     /** EMI の検索欄から focus が外れたら、その語を記す(どの画面でも)。 */
     private static void watchEmi() {
+        // EMI の検索欄の履歴の機能が有効なら、そちらが記す(同じ帳へ 2 度記さない)
+        if (Features.registry().isOn(SearchFeatures.EMI_SEARCH_HISTORY)) {
+            emiFocused = false;
+            return;
+        }
         boolean focused = EmiBridge.isSearchFocused();
         if (emiFocused && !focused && overlay != null) {
             overlay.record(EmiBridge.getSearchText());
