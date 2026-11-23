@@ -56,6 +56,11 @@ class MixinTargetsTest {
             if (Features.SELFTEST_FEATURES.contains(feature)) {
                 continue;
             }
+            // 開発用の機能(長時間の確かめの保持)の当て先は、組み立ての依存に無い(mc-runtime-test は Maven に無い)。
+            // 当たったかは、gomabase の箱が保持の 1 行で見る
+            if (Features.DEV_FEATURES.contains(feature)) {
+                continue;
+            }
             ClassNode mixin = read(name.replace('.', '/'));
             assertNotNull(mixin, "mixin の class が無い: " + name);
             List<String> targets = targets(mixin);

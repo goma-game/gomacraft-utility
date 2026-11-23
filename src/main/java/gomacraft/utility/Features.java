@@ -31,6 +31,16 @@ public final class Features {
     public static final List<String> SELFTEST_FEATURES =
             List.of("selftest_broken", "selftest_at", "selftest_missing_class");
 
+    /**
+     * 長時間の確かめ(gomabase のクライアントの起動の箱の {@code client-boot.sh soak})のときだけ {@code hold} にする。
+     * 配る jar を普通に起動したときは無いので、開発用の機能({@link #DEV_FEATURES})は一覧に入らない。
+     */
+    public static final String SOAK_PROPERTY = "gomacraft_utility.soak";
+
+    /** 開発用の機能。⚠ 当て先が組み立ての依存に無いので、当て先の試験(MixinTargetsTest)は見ない。 */
+    public static final List<String> DEV_FEATURES = List.of(
+            gomacraft.utility.features.soak_hold.SoakHold.ID);
+
     static final Logger LOGGER = LoggerFactory.getLogger(GomacraftUtility.MOD_ID);
 
     private static FeatureRegistry registry;
@@ -59,6 +69,10 @@ public final class Features {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);
             }
+        }
+        // 長時間の確かめの開発用の保持(goma-org/gomabase#2295)。⚠ 起動の引数で頼まれたときだけ一覧に入る
+        if ("hold".equals(System.getProperty(SOAK_PROPERTY))) {
+            features.add(new gomacraft.utility.features.soak_hold.SoakHold());
         }
         return features;
     }
