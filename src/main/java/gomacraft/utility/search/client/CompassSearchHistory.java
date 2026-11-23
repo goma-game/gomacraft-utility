@@ -10,11 +10,11 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 
 /**
- * コンパス(Nature's / Explorer's)の検索語の履歴(goma-org/gomabase#2295 の mcdev の確かめの 8)。窓の形と操作は
- * {@link SearchHistoryOverlay}(AE2 の端末と共通)。帳はコンパス用に別に持つ(品の語とバイオーム・構造物の語を混ぜない)。
+ * コンパス(Nature's / Explorer's)の検索語の履歴(goma-org/gomabase#2295 の mcdev の確かめの 8)。ウィンドウの形と操作は
+ * {@link SearchHistoryOverlay}(AE2 の端末と共通)。帳はコンパス用に別に持つ(アイテムの語とバイオーム・構造物の語を混ぜない)。
  *
  * <p>欄はそれぞれのコンパスの検索の機能({@code naturescompass_search}・{@code explorerscompass_search})の accessor で
- * 引く。⚠ その機能が有効かは描くたび・押すたびに見る(片方のコンパスの機能が後から FAILED になっても、もう片方の窓は止めない
+ * 引く。⚠ その機能が有効かは描くたび・押すたびに見る(片方のコンパスの機能が後から FAILED になっても、もう片方のウィンドウは止めない
  * —— #21 のレビュー)。画面が accessor を持つか({@code instanceof})で見分けるので、コンパスの class を名前で持たない。
  * 出す件数・持つ件数は AE2 の端末の履歴と同じ設定({@code SearchHistorySettings})。
  */

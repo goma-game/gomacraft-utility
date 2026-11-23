@@ -15,15 +15,15 @@ public final class SearchFeatures {
     /** AE2 の端末(パターン端末を含む)の名前の検索で、英語名でも当たるようにする。 */
     public static final String AE2_ENGLISH_SEARCH = "ae2_english_search";
     /**
-     * マウスの下の品の名前を、キー(既定は F)で検索欄へ送る(端末の品の欄の品は EMI の検索欄へ)。EMI の検索語を
+     * マウスの下のアイテムの名前を、キー(既定は F)で検索欄へ送る(ターミナルのアイテムの欄のアイテムは EMI の検索欄へ)。EMI の検索語を
      * AE2 の検索欄へ写す形(EMI の検索欄の上で F。専用のキーは既定で割り当てなし)も持つ。
      */
     public static final String AE2_SEARCH_KEY = "ae2_search_key";
     /** AE2 の端末の検索欄のダブルクリックで、EMI の検索との同期をその場だけ反転する。 */
     public static final String AE2_SEARCH_SYNC_TOGGLE = "ae2_search_sync_toggle";
-    /** AE2 の端末のツールチップの検索({@code $})の作り置きを端末をまたいで持ち、先に作る(軽くする)。 */
+    /** AE2 の端末のツールチップの検索({@code $})のキャッシュを端末をまたいで持ち、先に作る(軽くする)。 */
     public static final String AE2_TOOLTIP_SEARCH_CACHE = "ae2_tooltip_search_cache";
-    /** AE2 の端末の検索語の履歴(検索欄の上に窓を出す。EMI の検索欄の語も同じ履歴に記す)。 */
+    /** AE2 の端末の検索語の履歴(検索欄の左にウィンドウを出す。EMI の検索欄の語も同じ履歴に記す)。 */
     public static final String AE2_SEARCH_HISTORY = "ae2_search_history";
     /**
      * EMI の検索欄の検索語の履歴(欄の左にウィンドウを出す。帳は AE2 の端末と同じ)。EMI の中の欄
@@ -35,7 +35,7 @@ public final class SearchFeatures {
     /** Explorer's Compass の検索で、英語名でも当たるようにする。 */
     public static final String EXPLORERSCOMPASS_SEARCH = "explorerscompass_search";
     /**
-     * コンパス(Nature's / Explorer's)の検索語の履歴(AE2 の端末と同じ窓。帳は別)。それぞれのコンパスの検索の機能が
+     * コンパス(Nature's / Explorer's)の検索語の履歴(AE2 の端末と同じウィンドウ。帳は別)。それぞれのコンパスの検索の機能が
      * 有効なコンパスだけに出す(欄はその機能の accessor で引く)。
      */
     public static final String COMPASS_SEARCH_HISTORY = "compass_search_history";

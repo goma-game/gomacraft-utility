@@ -18,12 +18,12 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
 
 /**
- * AE2 の端末の検索語の履歴(goma-org/gomabase#2295)。窓の形と操作は {@link SearchHistoryOverlay}(コンパスと共通)。
+ * AE2 の端末の検索語の履歴(goma-org/gomabase#2295)。ウィンドウの形と操作は {@link SearchHistoryOverlay}(コンパスと共通)。
  *
  * <ul>
  *   <li>出す件数(空のとき・広げたとき)と持つ件数は設定の画面({@code ClientSettings}。既定は 3・10・100)で変えられ、
  *       すぐ効く(持つ件数は次に記すときから)。コンパスの履歴も同じ値を使う。</li>
- *   <li>記すのは、窓の決まり(Enter・欄の外・閉じたとき)に加えて、F キーで送ったときと、EMI の検索欄から focus が
+ *   <li>記すのは、ウィンドウの決まり(Enter・欄の外・閉じたとき)に加えて、F キーで送ったときと、EMI の検索欄から focus が
  *       外れたとき(AE2 と EMI の履歴を 1 つにする)。</li>
  *   <li>帳はプレイヤーの帳そのまま(前からの履歴を引き継ぐ)。</li>
  * </ul>

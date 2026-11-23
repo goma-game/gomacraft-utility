@@ -23,6 +23,8 @@ import net.neoforged.neoforge.common.NeoForge;
  *       欄の外を押せば欄の focus を外し、↑↓は EMI 自身の履歴に使う。だから押す・キーは EMI の入口
  *       ({@code EmiScreenManager#mouseClicked}・{@code #keyPressed})の頭で先に受ける(mixin
  *       {@code emi_search_history.EmiScreenManagerHistoryMixin})。ホイールは画面の出来事が先に来るので、そちらで受ける。</li>
+ *   <li>⚠ EMI が自分の入口を先に呼ぶのは、品の欄を持つ画面(AbstractContainerScreen)だけ。EMI のレシピの画面などでは
+ *       画面の出来事が先に来るので、そちらでも受ける(両方で受けても、扱ったら止めるので 2 度は動かない)。</li>
  *   <li>記すのは、Enter・欄の外を押したとき・欄から focus が外れたとき・欄に focus があるまま画面を閉じたとき
  *       (EMI の欄は画面をまたいで語が残るので、focus の無いまま閉じるたびには記さない)。</li>
  * </ul>
@@ -61,7 +63,7 @@ public final class EmiSearchHistory {
             public boolean recordOnClose() {
                 return false;
             }
-        }), false);
+        }), true);
         overlay.register();
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, event -> guard(EmiSearchHistory::watch));
     }

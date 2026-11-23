@@ -74,6 +74,9 @@ public final class SearchHistoryOverlay {
     private static final int Z = 500;
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(GomacraftUtility.MOD_ID);
 
+    /** 作ったウィンドウ(ほかの機能が「ウィンドウの上か」を問うため —— {@link #isOverShownWindow})。 */
+    private static final List<SearchHistoryOverlay> ALL = new java.util.concurrent.CopyOnWriteArrayList<>();
+
     // ファイルは 1 つ(ウィンドウがいくつあっても同じ帳を読み書きする)
     private static SearchHistoryStore store;
     private static Path file;
@@ -112,6 +115,32 @@ public final class SearchHistoryOverlay {
         this.scope = scope;
         this.hosts = List.copyOf(hosts);
         this.eventInput = eventInput;
+        ALL.add(this);
+    }
+
+    /**
+     * 今の画面に出ているどれかのウィンドウの上か(前の描画の形で見る)。⚠ EMI は押すのを画面の出来事より先に自分の入口で
+     * 受け、この Mod のほかの機能(EMI のアイテムの中クリック)もそこに当たる。ウィンドウが EMI の一覧やアイテムの欄に
+     * 重なるので、その機能はウィンドウの上なら譲る(当てる順に依らない形)。
+     */
+    public static boolean isOverShownWindow(double mouseX, double mouseY) {
+        Screen screen = Minecraft.getInstance().screen;
+        for (SearchHistoryOverlay overlay : ALL) {
+            Box box = overlay.shown;
+            if (box != null && screen != null && overlay.shownScreen == screen && box.contains(mouseX, mouseY)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** {@link #isOverShownWindow} を今のマウスの位置で(キーの操作から問うとき)。 */
+    public static boolean isMouseOverShownWindow() {
+        Minecraft mc = Minecraft.getInstance();
+        var window = mc.getWindow();
+        double x = mc.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth();
+        double y = mc.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight();
+        return isOverShownWindow(x, y);
     }
 
     public SearchHistoryOverlay(String feature, String scope, List<Host> hosts) {
@@ -296,20 +325,23 @@ public final class SearchHistoryOverlay {
         HistoryLayout.Placement p = HistoryLayout.place(new HistoryLayout.Input(host.mode(), screen.width,
                 screen.height, host.bounds(field), panelLeft, container, wanted, content, hint.size(), wide));
         int count = p.rows();
-        // 候補は貼り付け・Backspace・削除で減る。選んだ行と先頭の位置を、今の候補の数で丸める
+        // 候補は貼り付け・Backspace・削除で減る。選んだ行と先頭の位置を、今の候補の数とこの形の行の数で丸める。
+        // ⚠ ここでは scroll を書き換えない(小さい形と広げた形の両方を作るので、書き換えると選んだ行が動くたびに一覧が
+        // 流れる)。実際に出す形の先頭を、呼んだ側が scroll に写す(currentBox)
         if (selected >= all.size()) {
             selected = -1;
         }
+        int first = scroll;
         if (selected >= 0) {
-            if (selected < scroll) {
-                scroll = selected;
-            } else if (selected >= scroll + count) {
-                scroll = selected - count + 1;
+            if (selected < first) {
+                first = selected;
+            } else if (selected >= first + count) {
+                first = selected - count + 1;
             }
         }
         int maxScroll = Math.max(0, all.size() - count);
-        scroll = Math.max(0, Math.min(scroll, maxScroll));
-        List<SearchHistoryStore.Entry> rows = all.subList(scroll, Math.min(all.size(), scroll + count));
+        first = Math.max(0, Math.min(first, maxScroll));
+        List<SearchHistoryStore.Entry> rows = all.subList(first, Math.min(all.size(), first + count));
         // 行が候補より少なければ、枠を詰める(下から積むときは下の端を保つ)
         HistoryLayout.Rect rect = p.box();
         int unused = (count - rows.size()) * ROW;
@@ -327,7 +359,7 @@ public final class SearchHistoryOverlay {
                 }
             }
         }
-        return new Box(rect, rowsTop, rows, scroll, hint, hintTop, p.upward());
+        return new Box(rect, rowsTop, rows, first, hint, hintTop, p.upward());
     }
 
     /** 今の描画の一覧(広げるかは、前の形とマウスの位置で決める)。 */
@@ -348,6 +380,7 @@ public final class SearchHistoryOverlay {
         expanded = hover;
         Box box = hover ? wide : narrow;
         lastUpward = box.upward();
+        scroll = box.first();
         return box;
     }
 
@@ -464,6 +497,8 @@ public final class SearchHistoryOverlay {
 
     /** 押したのを扱う。扱ったら true(画面と EMI へは渡さない)。 */
     public boolean click(Screen screen, double mouseX, double mouseY, int button) {
+        // 前に押したものの離す操作が届かなかったとき(画面が変わった、など)に、関係の無い離す操作を飲まない
+        swallowRelease = false;
         Box box = currentBox(screen, mouseX, mouseY);
         if (box == null) {
             return false;
