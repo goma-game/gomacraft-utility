@@ -2,6 +2,8 @@
 
 共通の規則(応答・Issue 駆動・エージェントの構成・作業の心得・PR とマージの流れ)は GitHome の `AGENTS.md` が正。ここにはこのリポジトリ固有のことだけを書く。
 
+GitHome は `gomagom/GitHome`(https://github.com/gomagom/GitHome 。手元ではこのリポジトリの親)。このリポジトリだけを開いたセッション(GitHome を一緒に開いていない clone や、規則をこのリポジトリの根までしか読まないエージェント)には GitHome の規則・スキル・入口が届かないので、作業の前に GitHome の `AGENTS.md` と続きの `.agents/AGENTS.md` を読む(GitHome#69)。
+
 ## このリポジトリの位置づけ
 
 - gomacraft(ATM10)のための自作のユーティリティ Mod(id は `gomacraft_utility`)を作るところまでを持つ(build・試験・GitHub Release への jar の配置)。サーバとクライアントへ配るのは gomabase(台帳に release を宣言する側)。
