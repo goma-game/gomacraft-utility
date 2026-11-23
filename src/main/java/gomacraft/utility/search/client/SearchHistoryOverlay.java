@@ -3,6 +3,7 @@ package gomacraft.utility.search.client;
 import gomacraft.utility.Features;
 import gomacraft.utility.GomacraftUtility;
 import gomacraft.utility.feature.FeatureRegistry;
+import gomacraft.utility.search.HistoryLayout;
 import gomacraft.utility.search.SearchHistorySettings;
 import gomacraft.utility.search.SearchHistoryStore;
 import gomacraft.utility.settings.Settings;
@@ -15,55 +16,74 @@ import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.client.event.RenderTooltipEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * 検索欄の履歴の窓(AE2 の端末とコンパスで共通 —— goma-org/gomabase#2295。作りの参考は AE2 Recent Search ——
- * コードは写していない)。
+ * 検索欄の履歴のウィンドウ(AE2 の端末・EMI の検索欄・コンパスで共通 —— goma-org/gomabase#2295。作りの参考は
+ * AE2 Recent Search —— コードは写していない)。
  *
  * <ul>
- *   <li>検索欄に focus があるあいだ、欄の<b>上</b>に履歴を出す(端末の品の欄を隠さない)。欄に近い下から、お気に入り →
- *       新しい順に上へ積む。上が狭いときは、端末なら左の外、端末でない画面(コンパス)なら欄の下に出す。</li>
- *   <li>欄が空のときは最近の数件だけ出し、一覧にホバーすると広げる。入力中は入力に合う語だけを出し、合うものが無ければ出さない。</li>
+ *   <li>検索欄に focus があるあいだ出す。置き方は欄ごとに {@link HistoryLayout}(AE2 の端末は欄の左の見出しの所、
+ *       EMI は欄の左、コンパスは欄の上)。カーソルを合わせると広げる。入力中は入力に合う語だけを出し、合うものが無ければ
+ *       出さない。</li>
+ *   <li>出しているあいだは、ウィンドウと欄の上のツールチップ(AE2 の「名前で検索」、ウィンドウの下のアイテムのもの)を
+ *       出さない({@link RenderTooltipEvent.Pre} を止める)。描く順(z)で上に出すのではなく止めるのは、ツールチップが
+ *       カーソルの位置で大きさも向きも変わり、重ならない置き方を決められないため。</li>
  *   <li>一覧の上でホイールを回すと古いものへ遡る。</li>
  *   <li>記すのは、Enter・欄の外を押したとき・画面を閉じたとき(打つ 1 字ごとには記さない)。</li>
- *   <li>左で使う、右で消す、Shift + 左か中でお気に入りを付け外し。↑↓で選び、Enter で使う。操作の案内は一覧の上の端に出す。</li>
+ *   <li>左で使う、右で消す、Shift + 左か中でお気に入りを付け外し。↑↓で選び、Enter で使う。操作の案内は広げたときに出す。</li>
  *   <li>履歴は手元の {@code config/gomacraft_utility/search_history.json} に置く(サーバには送らない)。ファイルは 1 つで、
- *       窓ごとに別の帳({@code scope})を持つ(品の語とバイオームの語を混ぜない)。</li>
+ *       ウィンドウごとに別の帳({@code scope})を持つ(アイテムの語とバイオームの語を混ぜない。AE2 と EMI は同じ帳)。</li>
  * </ul>
  */
 public final class SearchHistoryOverlay {
-    /** 欄を持つ画面と、語を使う道(AE2 の端末・コンパス)。 */
+    /** 欄を持つ画面と、語を使う道。 */
     public interface Host {
-        /** この画面の検索欄(この窓の画面でなければ null)。 */
+        /** この画面の検索欄(この画面に無ければ null)。 */
         EditBox field(Screen screen);
 
         /** 履歴の語で検索する。 */
         void apply(Screen screen, EditBox field, String text);
+
+        /** 置き方。 */
+        default HistoryLayout.Mode mode() {
+            return HistoryLayout.Mode.AROUND;
+        }
+
+        /** 欄の見た目の枠(AE2 の欄は枠が字の外へ 2 ずつ広い)。 */
+        default HistoryLayout.Rect bounds(EditBox field) {
+            return new HistoryLayout.Rect(field.getX(), field.getY(), field.getWidth(), field.getHeight());
+        }
+
+        /** 画面を閉じたときに欄の語を記すか(EMI の欄は画面をまたいで語が残るので、閉じるたびには記さない)。 */
+        default boolean recordOnClose() {
+            return true;
+        }
     }
 
-    private static final int ROW = 11;
-    private static final int PAD = 2;
-    private static final int MAX_WIDTH = 220;
+    private static final int ROW = HistoryLayout.ROW;
+    private static final int PAD = HistoryLayout.PAD;
     private static final String FAVORITE_MARK = "★ ";
-    /** 端末の左の外へ出すときに空ける幅(AE2 の端末の左の道具の列の分)。 */
-    private static final int SIDE_GAP = 24;
-    /** 端末の左の外へ出すのに要る幅(これより狭ければ、上の端に寄せてでも欄の上に出す)。 */
-    private static final int MIN_SIDE_WIDTH = 60;
     private static final int MAX_WRITE_FAILURES = 3;
+    /** 描く高さ(ツールチップの 400 より上)。 */
+    private static final int Z = 500;
     private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger(GomacraftUtility.MOD_ID);
 
-    // ファイルは 1 つ(窓が 2 つあっても同じ帳を読み書きする)
+    // ファイルは 1 つ(ウィンドウがいくつあっても同じ帳を読み書きする)
     private static SearchHistoryStore store;
     private static Path file;
 
     private final String feature;
     private final String scope;
     private final List<Host> hosts;
-    /** 続けて書けなかった回数(窓ごと —— FAILED にするのは、書こうとした窓の機能だけ)。 */
+    /** 押す・キーを画面の出来事で受けるか(偽なら、呼ぶ側が {@link #click}・{@link #key} を先に呼ぶ —— EMI)。 */
+    private final boolean eventInput;
+    /** 続けて書けなかった回数(ウィンドウごと —— FAILED にするのは、書こうとしたウィンドウの機能だけ)。 */
     private int writeFailures;
     /** ↑↓で選んだ行(入力に合う一覧の中の位置。-1 は選んでいない)。 */
     private int selected = -1;
@@ -73,20 +93,32 @@ public final class SearchHistoryOverlay {
     private int scroll;
     /** 前の描画で広げていたか(広げた一覧の中にマウスがある間は広げたままにする)。 */
     private boolean expanded;
-    /** 前の描画で一覧を欄の上に(下から上へ)積んだか。↑↓とホイールの向きを、見た目の向きに合わせる。 */
+    /** 前の描画で一覧を下から上へ積んだか。↑↓とホイールの向きを、見た目の向きに合わせる。 */
     private boolean lastUpward = true;
+    /** 前の描画で出したウィンドウと欄の枠と画面(ツールチップを止めるのに使う。出していなければ null)。 */
+    private Box shown;
+    private HistoryLayout.Rect shownField;
+    private Screen shownScreen;
+    /** このウィンドウで押したので、続く離す操作も画面へ通さない。 */
+    private boolean swallowRelease;
 
     /**
-     * @param feature この窓を持つ機能(guard と FAILED の宛先)
-     * @param scope 帳の名前(空ならプレイヤーの帳そのまま —— AE2 の端末の前からの帳)
+     * @param feature    このウィンドウを持つ機能(guard と FAILED の宛先)
+     * @param scope      帳の名前(空ならプレイヤーの帳そのまま —— AE2 の端末と EMI の帳)
+     * @param eventInput 押す・キーを画面の出来事で受けるか
      */
-    public SearchHistoryOverlay(String feature, String scope, List<Host> hosts) {
+    public SearchHistoryOverlay(String feature, String scope, List<Host> hosts, boolean eventInput) {
         this.feature = feature;
         this.scope = scope;
         this.hosts = List.copyOf(hosts);
+        this.eventInput = eventInput;
     }
 
-    /** 出す件数(設定の画面の値。すぐ効く —— 件数の設定は AE2 の端末の履歴の機能のもので、コンパスも同じ値を使う)。 */
+    public SearchHistoryOverlay(String feature, String scope, List<Host> hosts) {
+        this(feature, scope, hosts, true);
+    }
+
+    /** 出す件数(設定の画面の値。すぐ効く —— 件数の設定は AE2 の端末の履歴の機能のもので、ほかのウィンドウも同じ値を使う)。 */
     private static int collapsedRows() {
         return Settings.client().get(SearchHistorySettings.COLLAPSED_ROWS);
     }
@@ -112,31 +144,40 @@ public final class SearchHistoryOverlay {
 
     /** 画面の出来事を聞く。 */
     public void register() {
-        NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Post.class, event -> guard(() -> render(event)));
-        NeoForge.EVENT_BUS.addListener(ScreenEvent.KeyPressed.Pre.class, event -> guard(() -> onKey(event)));
+        // 描くのは最後(EMI が同じ出来事で描く欄より上に出す)
+        NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, false, ScreenEvent.Render.Post.class,
+                event -> guard(() -> render(event)));
+        NeoForge.EVENT_BUS.addListener(RenderTooltipEvent.Pre.class, event -> guard(() -> onTooltip(event)));
+        if (eventInput) {
+            NeoForge.EVENT_BUS.addListener(ScreenEvent.KeyPressed.Pre.class, event -> guard(() -> {
+                if (key(event.getScreen(), event.getKeyCode())) {
+                    event.setCanceled(true);
+                }
+            }));
+            NeoForge.EVENT_BUS.addListener(ScreenEvent.MouseButtonPressed.Pre.class, event -> guard(() -> {
+                if (click(event.getScreen(), event.getMouseX(), event.getMouseY(), event.getButton())) {
+                    event.setCanceled(true);
+                }
+            }));
+        }
+        NeoForge.EVENT_BUS.addListener(ScreenEvent.MouseButtonReleased.Pre.class, event -> guard(() -> {
+            if (swallowRelease) {
+                swallowRelease = false;
+                event.setCanceled(true);
+            }
+        }));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.CharacterTyped.Post.class, event -> guard(() -> {
             if (field(event.getScreen()) != null) {
                 selected = -1;
                 scroll = 0;
             }
         }));
-        NeoForge.EVENT_BUS.addListener(ScreenEvent.MouseButtonPressed.Pre.class, event -> guard(() -> onClick(event)));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.MouseScrolled.Pre.class, event -> guard(() -> onScroll(event)));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.Closing.class, event -> guard(() -> onClose(event.getScreen())));
     }
 
     private void guard(Runnable body) {
         Features.guard(feature, body);
-    }
-
-    private EditBox field(Screen screen) {
-        for (Host host : hosts) {
-            EditBox field = host.field(screen);
-            if (field != null) {
-                return field;
-            }
-        }
-        return null;
     }
 
     private Host host(Screen screen) {
@@ -146,6 +187,11 @@ public final class SearchHistoryOverlay {
             }
         }
         return null;
+    }
+
+    private EditBox field(Screen screen) {
+        Host host = host(screen);
+        return host == null ? null : host.field(screen);
     }
 
     private String player() {
@@ -197,24 +243,30 @@ public final class SearchHistoryOverlay {
     }
 
     /** 一覧を出す位置と大きさ。{@code upward} は欄に近い先頭を一番下に置く形。 */
-    private record Box(int x, int top, int width, int rowsTop, List<SearchHistoryStore.Entry> rows, int first,
-                       boolean hint, boolean upward) {
-        int bottom() {
-            return rowsTop + rows.size() * ROW + PAD;
+    private record Box(HistoryLayout.Rect rect, int rowsTop, List<SearchHistoryStore.Entry> rows, int first,
+                       List<String> hint, int hintTop, boolean upward) {
+        int x() {
+            return rect.x();
+        }
+
+        int width() {
+            return rect.width();
         }
 
         boolean contains(double mouseX, double mouseY) {
-            return mouseX >= x - 1 && mouseX < x + width + 1 && mouseY >= top - 1 && mouseY < bottom() + 1;
+            return mouseX >= rect.x() - 1 && mouseX < rect.right() + 1
+                    && mouseY >= rect.y() - 1 && mouseY < rect.bottom() + 1;
         }
 
-        /** 一覧の i 番目(0 = 先頭 = 欄に近い)の行の上端。欄の上に出すときは、先頭を一番下に置く。 */
+        /** 一覧の i 番目(0 = 先頭 = 欄に近い)の行の上端。下から積むときは、先頭を一番下に置く。 */
         int rowY(int i) {
             return rowsTop + (upward ? rows.size() - 1 - i : i) * ROW;
         }
 
         /** マウスの下の行の、入力に合う一覧の中の位置(行の上でなければ -1)。 */
         int indexAt(double mouseX, double mouseY) {
-            if (mouseX < x || mouseX >= x + width || mouseY < rowsTop || mouseY >= rowsTop + rows.size() * ROW) {
+            if (mouseX < rect.x() || mouseX >= rect.right() || mouseY < rowsTop
+                    || mouseY >= rowsTop + rows.size() * ROW) {
                 return -1;
             }
             int fromTop = (int) ((mouseY - rowsTop) / ROW);
@@ -222,31 +274,28 @@ public final class SearchHistoryOverlay {
         }
     }
 
-    /** 欄の上に出す一覧(出さないなら null)。{@code wide} は広げた形(ホバー・入力中)。 */
-    private Box box(Screen screen, EditBox field, List<SearchHistoryStore.Entry> all, boolean wide) {
+    /** 出す一覧(出さないなら null)。{@code wide} は広げた形(ホバー)。 */
+    private Box box(Screen screen, Host host, EditBox field, List<SearchHistoryStore.Entry> all, boolean wide) {
         if (field == null || !field.isVisible() || !field.isFocused() || all.isEmpty()) {
             return null;
         }
         boolean typing = !field.getValue().isBlank();
-        int count = typing || wide ? visibleRows() : collapsedRows();
-        boolean hint = wide;
+        int wanted = typing || wide ? visibleRows() : collapsedRows();
+        List<String> hint = wide ? hintLines() : List.of();
         Font font = Minecraft.getInstance().font;
-        // 欄の上の空きに収まる行の数(画面の上の端を越えない)。上が狭いときは、端末なら左の外、端末でない画面なら欄の下へ
-        int room = (field.getY() - 1 - PAD * 2 - (hint ? ROW : 0)) / ROW;
-        boolean container = screen instanceof AbstractContainerScreen<?>;
-        int leftEdge = screen instanceof AbstractContainerScreen<?> c ? c.getGuiLeft() - SIDE_GAP : 0;
-        int belowTop = field.getY() + field.getHeight() + 1;
-        int belowRoom = (screen.height - belowTop - PAD * 2 - (hint ? ROW : 0)) / ROW;
-        // 端末でない画面は、上が狭くても、下の空きの方が狭ければ上に出す(#21 のレビュー)
-        boolean upward = room >= Math.min(count, 3) || (container && leftEdge < MIN_SIDE_WIDTH)
-                || (!container && belowRoom <= room);
-        if (upward) {
-            count = Math.max(1, Math.min(count, room));
-        } else {
-            int start = container ? field.getY() : belowTop;
-            int below = (screen.height - start - PAD * 2 - (hint ? ROW : 0)) / ROW;
-            count = Math.max(1, Math.min(count, below));
+        int content = 0;
+        for (SearchHistoryStore.Entry entry : all.subList(Math.min(scroll, all.size()),
+                Math.min(all.size(), scroll + wanted))) {
+            content = Math.max(content, font.width(label(entry)) + PAD * 2 + 2);
         }
+        for (String line : hint) {
+            content = Math.max(content, font.width(line) + PAD * 2);
+        }
+        boolean container = screen instanceof AbstractContainerScreen<?>;
+        int panelLeft = screen instanceof AbstractContainerScreen<?> c ? c.getGuiLeft() : 0;
+        HistoryLayout.Placement p = HistoryLayout.place(new HistoryLayout.Input(host.mode(), screen.width,
+                screen.height, host.bounds(field), panelLeft, container, wanted, content, hint.size(), wide));
+        int count = p.rows();
         // 候補は貼り付け・Backspace・削除で減る。選んだ行と先頭の位置を、今の候補の数で丸める
         if (selected >= all.size()) {
             selected = -1;
@@ -261,44 +310,40 @@ public final class SearchHistoryOverlay {
         int maxScroll = Math.max(0, all.size() - count);
         scroll = Math.max(0, Math.min(scroll, maxScroll));
         List<SearchHistoryStore.Entry> rows = all.subList(scroll, Math.min(all.size(), scroll + count));
-        int width = field.getWidth();
-        for (SearchHistoryStore.Entry entry : rows) {
-            width = Math.max(width, font.width(label(entry)) + PAD * 2 + 2);
+        // 行が候補より少なければ、枠を詰める(下から積むときは下の端を保つ)
+        HistoryLayout.Rect rect = p.box();
+        int unused = (count - rows.size()) * ROW;
+        int rowsTop = p.rowsTop();
+        int hintTop = p.hintTop();
+        if (unused > 0) {
+            if (p.upward()) {
+                rect = new HistoryLayout.Rect(rect.x(), rect.y() + unused, rect.width(), rect.height() - unused);
+                rowsTop += unused;
+                hintTop += unused;
+            } else {
+                rect = new HistoryLayout.Rect(rect.x(), rect.y(), rect.width(), rect.height() - unused);
+                if (hintTop > rowsTop) {
+                    hintTop -= unused;
+                }
+            }
         }
-        if (hint) {
-            width = Math.max(width, font.width(hintText()) + PAD * 2);
-        }
-        width = Math.min(width, Math.max(field.getWidth(), MAX_WIDTH));
-        int height = rows.size() * ROW + PAD * 2 + (hint ? ROW : 0);
-        int x;
-        int top;
-        if (upward) {
-            x = Math.max(0, Math.min(field.getX(), screen.width - width - 1));
-            top = Math.max(0, field.getY() - 1 - height);
-        } else if (container) {
-            width = Math.min(width, leftEdge - 1);
-            x = leftEdge - width;
-            top = field.getY();
-        } else {
-            x = Math.max(0, Math.min(field.getX(), screen.width - width - 1));
-            top = belowTop;
-        }
-        int rowsTop = top + PAD + (hint ? ROW : 0);
-        return new Box(x, top, width, rowsTop, rows, scroll, hint, upward);
+        return new Box(rect, rowsTop, rows, scroll, hint, hintTop, p.upward());
     }
 
     /** 今の描画の一覧(広げるかは、前の形とマウスの位置で決める)。 */
-    private Box currentBox(Screen screen, EditBox field, double mouseX, double mouseY) {
-        if (field == null || store == null) {
+    private Box currentBox(Screen screen, double mouseX, double mouseY) {
+        Host host = host(screen);
+        if (host == null || store == null) {
             return null;
         }
+        EditBox field = host.field(screen);
         List<SearchHistoryStore.Entry> all = candidates(field);
-        Box wide = box(screen, field, all, true);
+        Box wide = box(screen, host, field, all, true);
         if (wide == null) {
             expanded = false;
             return null;
         }
-        Box narrow = box(screen, field, all, false);
+        Box narrow = box(screen, host, field, all, false);
         boolean hover = narrow.contains(mouseX, mouseY) || (expanded && wide.contains(mouseX, mouseY));
         expanded = hover;
         Box box = hover ? wide : narrow;
@@ -306,8 +351,8 @@ public final class SearchHistoryOverlay {
         return box;
     }
 
-    private static Component hintText() {
-        return Component.translatable("gomacraft_utility.search_history.hint");
+    private static List<String> hintLines() {
+        return List.of(Component.translatable("gomacraft_utility.search_history.hint").getString().split("\n"));
     }
 
     private static String label(SearchHistoryStore.Entry entry) {
@@ -315,75 +360,100 @@ public final class SearchHistoryOverlay {
     }
 
     private void render(ScreenEvent.Render.Post event) {
-        EditBox field = field(event.getScreen());
-        Box box = currentBox(event.getScreen(), field, event.getMouseX(), event.getMouseY());
+        Screen screen = event.getScreen();
+        Box box = currentBox(screen, event.getMouseX(), event.getMouseY());
+        shown = box;
+        shownScreen = box == null ? null : screen;
+        Host host = host(screen);
+        shownField = box == null || host == null ? null : host.bounds(host.field(screen));
         if (box == null) {
             return;
         }
         GuiGraphics g = event.getGuiGraphics();
         Font font = Minecraft.getInstance().font;
         int hovered = box.indexAt(event.getMouseX(), event.getMouseY());
+        HistoryLayout.Rect r = box.rect();
         g.pose().pushPose();
-        // 画面の品とツールチップの上に出す
-        g.pose().translate(0, 0, 400);
-        g.fill(box.x() - 1, box.top() - 1, box.x() + box.width() + 1, box.bottom() + 1, 0xFF8B8B8B);
-        g.fill(box.x(), box.top(), box.x() + box.width(), box.bottom(), 0xF0101010);
-        if (box.hint()) {
-            String hint = font.plainSubstrByWidth(hintText().getString(), box.width() - PAD * 2);
-            g.drawString(font, hint, box.x() + PAD, box.top() + PAD + 2, 0xFF9A9A9A, false);
+        // 画面のアイテムとツールチップの上に出す
+        g.pose().translate(0, 0, Z);
+        g.fill(r.x() - 1, r.y() - 1, r.right() + 1, r.bottom() + 1, 0xFF8B8B8B);
+        g.fill(r.x(), r.y(), r.right(), r.bottom(), 0xF0101010);
+        for (int i = 0; i < box.hint().size(); i++) {
+            String line = font.plainSubstrByWidth(box.hint().get(i), r.width() - PAD * 2);
+            g.drawString(font, line, r.x() + PAD, box.hintTop() + i * ROW + 2, 0xFF9A9A9A, false);
         }
         for (int i = 0; i < box.rows().size(); i++) {
             SearchHistoryStore.Entry entry = box.rows().get(i);
             int index = box.first() + i;
             int y = box.rowY(i);
             if (index == selected || index == hovered) {
-                g.fill(box.x() + 1, y, box.x() + box.width() - 1, y + ROW, 0x60FFFFFF);
+                g.fill(r.x() + 1, y, r.right() - 1, y + ROW, 0x60FFFFFF);
             }
-            String text = font.plainSubstrByWidth(label(entry), box.width() - PAD * 2);
-            g.drawString(font, text, box.x() + PAD, y + 2, entry.favorite() ? 0xFFFFD866 : 0xFFE0E0E0, false);
+            String text = font.plainSubstrByWidth(label(entry), r.width() - PAD * 2);
+            g.drawString(font, text, r.x() + PAD, y + 2, entry.favorite() ? 0xFFFFD866 : 0xFFE0E0E0, false);
         }
         g.pose().popPose();
     }
 
-    private void onKey(ScreenEvent.KeyPressed.Pre event) {
-        EditBox field = field(event.getScreen());
-        if (field == null || !field.isVisible() || !field.isFocused() || store == null) {
+    /**
+     * ウィンドウを出しているあいだ、ウィンドウか欄の上に出るツールチップを止める。描画の順で、ツールチップは画面の描画の中、
+     * ウィンドウはその後に描くので、前の描画のウィンドウで決める(1 コマ遅れる)。
+     */
+    private void onTooltip(RenderTooltipEvent.Pre event) {
+        Box box = shown;
+        HistoryLayout.Rect fieldRect = shownField;
+        if (box == null || shownScreen != Minecraft.getInstance().screen) {
             return;
         }
-        int key = event.getKeyCode();
+        int x = event.getX();
+        int y = event.getY();
+        if (box.contains(x, y) || (fieldRect != null && fieldRect.contains(x, y))) {
+            event.setCanceled(true);
+        }
+    }
+
+    /** キーを扱う。扱ったら true(画面と EMI へは渡さない)。 */
+    public boolean key(Screen screen, int key) {
+        EditBox field = field(screen);
+        if (field == null || !field.isVisible() || !field.isFocused() || store == null) {
+            return false;
+        }
         if (key == GLFW.GLFW_KEY_UP || key == GLFW.GLFW_KEY_DOWN) {
-            // 見た目の向きに合わせる: 欄の上に積むときは、↑で欄から遠い(古い)方へ動く
+            // 見た目の向きに合わせる: 下から積むときは、↑で欄から遠い(古い)方へ動く
             int size = candidates(field).size();
             if (size == 0) {
-                return;
+                return false;
             }
             if ((key == GLFW.GLFW_KEY_UP) == lastUpward) {
                 selected = selected + 1 >= size ? 0 : selected + 1;
             } else {
                 selected = selected <= 0 ? size - 1 : selected - 1;
             }
-            event.setCanceled(true);
-        } else if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
+            return true;
+        }
+        if (key == GLFW.GLFW_KEY_ENTER || key == GLFW.GLFW_KEY_KP_ENTER) {
             List<SearchHistoryStore.Entry> all = candidates(field);
+            boolean used = false;
             if (selected >= 0 && selected < all.size()) {
-                use(event.getScreen(), field, all.get(selected).text());
-                event.setCanceled(true);
+                use(screen, field, all.get(selected).text());
+                used = true;
             } else {
                 // 画面が Enter で欄の focus を外す。その前に記す
                 record(field.getValue());
             }
             selected = -1;
             scroll = 0;
+            return used;
         }
+        return false;
     }
 
     private void onScroll(ScreenEvent.MouseScrolled.Pre event) {
-        EditBox field = field(event.getScreen());
-        Box box = currentBox(event.getScreen(), field, event.getMouseX(), event.getMouseY());
+        Box box = currentBox(event.getScreen(), event.getMouseX(), event.getMouseY());
         if (box == null || !box.contains(event.getMouseX(), event.getMouseY())) {
             return;
         }
-        // 欄の上に積むときは上が古い: ホイールを上へ回すと古いものへ遡る(左の外・欄の下に出すときは逆)
+        // 下から積むときは上が古い: ホイールを上へ回すと古いものへ遡る(上から積むときは逆)
         boolean older = (event.getScrollDeltaY() > 0) == box.upward();
         scroll += older ? 1 : -1;
         if (scroll < 0) {
@@ -392,29 +462,29 @@ public final class SearchHistoryOverlay {
         event.setCanceled(true);
     }
 
-    private void onClick(ScreenEvent.MouseButtonPressed.Pre event) {
-        EditBox field = field(event.getScreen());
-        Box box = currentBox(event.getScreen(), field, event.getMouseX(), event.getMouseY());
+    /** 押したのを扱う。扱ったら true(画面と EMI へは渡さない)。 */
+    public boolean click(Screen screen, double mouseX, double mouseY, int button) {
+        Box box = currentBox(screen, mouseX, mouseY);
         if (box == null) {
-            return;
+            return false;
         }
-        int index = box.indexAt(event.getMouseX(), event.getMouseY());
-        if (index < 0 && box.contains(event.getMouseX(), event.getMouseY())) {
-            // 一覧の余白・案内の行。下の枠へ通さない
-            event.setCanceled(true);
-            return;
+        EditBox field = field(screen);
+        int index = box.indexAt(mouseX, mouseY);
+        if (index < 0 && box.contains(mouseX, mouseY)) {
+            // 一覧の余白・案内の行。下の画面へ通さない
+            swallowRelease = true;
+            return true;
         }
         if (index < 0) {
-            if (!field.isMouseOver(event.getMouseX(), event.getMouseY())) {
+            if (!field.isMouseOver(mouseX, mouseY)) {
                 // 欄の外を押した(focus が外れる)。今の語を記す
                 record(field.getValue());
                 selected = -1;
                 scroll = 0;
             }
-            return;
+            return false;
         }
         String text = box.rows().get(index - box.first()).text();
-        int button = event.getButton();
         boolean shift = Screen.hasShiftDown();
         if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             if (store.remove(player(), text)) {
@@ -426,10 +496,11 @@ public final class SearchHistoryOverlay {
                 save();
             }
         } else if (button == GLFW.GLFW_MOUSE_BUTTON_LEFT) {
-            use(event.getScreen(), field, text);
+            use(screen, field, text);
         }
         selected = -1;
-        event.setCanceled(true);
+        swallowRelease = true;
+        return true;
     }
 
     /** 履歴の語で検索し、欄の focus を外す(結果をすぐ見られるように)。 */
@@ -440,17 +511,23 @@ public final class SearchHistoryOverlay {
         }
         record(text);
         field.setFocused(false);
-        screen.setFocused(null);
+        if (screen.getFocused() == field) {
+            screen.setFocused(null);
+        }
         scroll = 0;
     }
 
     private void onClose(Screen screen) {
-        EditBox field = field(screen);
-        if (field != null && field.isVisible()) {
+        Host host = host(screen);
+        EditBox field = host == null ? null : host.field(screen);
+        if (field != null && field.isVisible() && (host.recordOnClose() || field.isFocused())) {
             record(field.getValue());
         }
         selected = -1;
         scroll = 0;
         expanded = false;
+        shown = null;
+        shownScreen = null;
+        shownField = null;
     }
 }

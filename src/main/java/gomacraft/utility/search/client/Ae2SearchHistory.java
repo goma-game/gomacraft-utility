@@ -1,15 +1,18 @@
 package gomacraft.utility.search.client;
 
 import appeng.client.gui.me.common.MEStorageScreen;
+import appeng.client.gui.widgets.AETextField;
 import gomacraft.utility.Features;
 import gomacraft.utility.feature.FeatureContext;
 import gomacraft.utility.mixin.ae2_search_history.MEStorageScreenHistoryAccessor;
+import gomacraft.utility.search.HistoryLayout;
 import gomacraft.utility.search.SearchFeatures;
 import gomacraft.utility.search.SearchHistorySettings;
 import gomacraft.utility.settings.Settings;
 import java.util.List;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.Rect2i;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -48,6 +51,18 @@ public final class Ae2SearchHistory {
             public void apply(Screen screen, EditBox field, String text) {
                 Ae2Search.apply(field, text);
             }
+
+            @Override
+            public HistoryLayout.Mode mode() {
+                return HistoryLayout.Mode.TERMINAL;
+            }
+
+            @Override
+            public HistoryLayout.Rect bounds(EditBox field) {
+                // AE2 の欄の見た目の枠(字の位置より 2 ずつ外。AETextField#getTooltipArea)
+                Rect2i area = ((AETextField) field).getTooltipArea();
+                return new HistoryLayout.Rect(area.getX(), area.getY(), area.getWidth(), area.getHeight());
+            }
         }));
         overlay.register();
         if (ModList.get().isLoaded("emi")) {
@@ -77,6 +92,11 @@ public final class Ae2SearchHistory {
 
     /** EMI の検索欄から focus が外れたら、その語を記す(どの画面でも)。 */
     private static void watchEmi() {
+        // EMI の検索欄の履歴の機能が有効なら、そちらが記す(同じ帳へ 2 度記さない)
+        if (Features.registry().isOn(SearchFeatures.EMI_SEARCH_HISTORY)) {
+            emiFocused = false;
+            return;
+        }
         boolean focused = EmiBridge.isSearchFocused();
         if (emiFocused && !focused && overlay != null) {
             overlay.record(EmiBridge.getSearchText());

@@ -25,6 +25,18 @@ final class EmiBridge {
         return search != null && search.isVisible() && search.isMouseOver(mouseX, mouseY);
     }
 
+    /**
+     * EMI の検索欄(出ていなければ null)。⚠ {@link #isMouseOverSearch} と同じく EMI の中の public の欄を読む
+     * (検索語の履歴の機能 emi_search_history)。
+     */
+    static net.minecraft.client.gui.components.EditBox searchField() {
+        if (dev.emi.emi.screen.EmiScreenManager.isDisabled()) {
+            return null;
+        }
+        var search = dev.emi.emi.screen.EmiScreenManager.search;
+        return search != null && search.isVisible() ? search : null;
+    }
+
     static String getSearchText() {
         return EmiApi.getSearchText();
     }

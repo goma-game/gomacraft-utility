@@ -38,6 +38,7 @@ import org.lwjgl.glfw.GLFW;
  *   <li><b>Alt + クリック</b>({@link #KEY}): アイテムの在庫があれば 1 スタックを手持ちへ。無くて作れるなら、1 回分の数で
  *       計画の画面を開く(数の画面を飛ばす)。</li>
  *   <li><b>Alt + Shift + クリック</b>: 作れるなら 1 スタック分の数で計画の画面を開く。作れなくて在庫があれば取り出す。</li>
+ *   <li>Alt + クリック・Alt + Shift + クリックは、設定 {@link #ALT_CLICK}(既定は切)を入にしたときだけ効く。</li>
  *   <li>設定 {@link #SKIP_CONFIRM}(既定は切)を入にしたときだけ、計画の画面も飛ばして「すぐ始める」で作る
  *       (材料が足りなければ計画の画面が残る)。</li>
  *   <li>パターンが無く、作業台のレシピで材料が揃う品は {@link GridCraft}(計画の画面が無いので今の形)。</li>
@@ -56,6 +57,14 @@ public final class QuickCraft {
     public static final KeyMapping AMOUNT_KEY = new KeyMapping("key.gomacraft_utility.ae_craft_amount",
             KeyConflictContext.GUI, KeyModifier.NONE, InputConstants.Type.MOUSE, GLFW.GLFW_MOUSE_BUTTON_MIDDLE,
             "key.categories.gomacraft_utility");
+
+    /**
+     * Alt + クリック・Alt + Shift + クリック({@link #KEY})を使うか(既定は切 —— 使う人が少ない。goma-org/gomabase#2295 の
+     * 2 回目の確かめの 4)。切のあいだは、その操作を EMI へそのまま通す。パターンの無いアイテムを作業台のレシピで作る
+     * ({@link GridCraft})のもこの操作からなので、切のあいだは動かない。中クリックはこの設定に依らない。
+     */
+    public static final ClientSettings.Bool ALT_CLICK =
+            new ClientSettings.Bool(EmiAeFeatures.QUICK_CRAFT, "alt_click", false);
 
     /** Alt + クリックで作るとき、計画の画面も飛ばして一気に作るか(既定は切 —— 量をその場で変えられないため)。 */
     public static final ClientSettings.Bool SKIP_CONFIRM =
@@ -88,6 +97,7 @@ public final class QuickCraft {
 
     /** 機能の初期化(画面の側だけ)。 */
     public static void init(IEventBus modBus) {
+        Settings.client().register(ALT_CLICK);
         Settings.client().register(SKIP_CONFIRM);
         modBus.addListener(RegisterKeyMappingsEvent.class, event -> Features.guard(EmiAeFeatures.QUICK_CRAFT, () -> {
             event.register(KEY);
@@ -112,7 +122,8 @@ public final class QuickCraft {
     /** 押されたものがどの操作か(どれでもなければ null)。修飾キーの付く Alt + クリックを先に見る。 */
     private static Gesture gestureOf(InputConstants.Key key) {
         if (KEY.isActiveAndMatches(key)) {
-            return Gesture.QUICK;
+            // 切のときは、Alt + クリックを EMI へそのまま通す(下の中クリックの割り当てにも当てない)
+            return Settings.client().get(ALT_CLICK) ? Gesture.QUICK : null;
         }
         // 修飾キー無しの割り当ては、Ctrl などを押している間は当たらない(Ctrl + 中クリックは EMI のチートに残る)
         if (AMOUNT_KEY.isActiveAndMatches(key)) {
