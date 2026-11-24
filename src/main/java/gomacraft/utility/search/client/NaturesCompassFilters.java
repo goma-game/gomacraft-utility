@@ -37,7 +37,7 @@ public final class NaturesCompassFilters {
         if (!CompassQuery.takesOver(raw, KINDS)) {
             return false;
         }
-        List<CompassQuery.Term> terms = CompassQuery.parse(raw);
+        List<CompassQuery.Term> terms = CompassQuery.parse(raw, KINDS);
         NaturesCompassFilterAccessor accessor = (NaturesCompassFilterAccessor) screen;
         Level level = screen.level;
         List<Biome> out = new ArrayList<>();

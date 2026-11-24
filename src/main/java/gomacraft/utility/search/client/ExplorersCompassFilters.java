@@ -34,7 +34,7 @@ public final class ExplorersCompassFilters {
         if (!CompassQuery.takesOver(raw, KINDS)) {
             return false;
         }
-        List<CompassQuery.Term> terms = CompassQuery.parse(raw);
+        List<CompassQuery.Term> terms = CompassQuery.parse(raw, KINDS);
         ExplorersCompassFilterAccessor accessor = (ExplorersCompassFilterAccessor) screen;
         List<ResourceLocation> out = new ArrayList<>();
         for (ResourceLocation key : accessor.gomacraftUtility$allowedStructureKeys()) {
