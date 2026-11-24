@@ -137,6 +137,27 @@ public final class SearchHistoryStore {
         return true;
     }
 
+    /**
+     * 帳を分ける: 名前が {@code <誰か>#<from>} の帳を、{@code <誰か>#<to>} のそれぞれへ写して元を消す(今の記録を失わない)。
+     * 写し先が既に在る帳には写さない(分けた後の記録を上書きしない)。変わったら true(呼ぶ側が書く)。
+     */
+    public boolean splitScope(String from, List<String> to) {
+        String suffix = "#" + from;
+        boolean changed = false;
+        for (String key : List.copyOf(players.keySet())) {
+            if (!key.endsWith(suffix)) {
+                continue;
+            }
+            String who = key.substring(0, key.length() - suffix.length());
+            List<Entry> entries = players.remove(key);
+            for (String scope : to) {
+                players.putIfAbsent(who + "#" + scope, new ArrayList<>(entries));
+            }
+            changed = true;
+        }
+        return changed;
+    }
+
     /** 出す順(お気に入り → 新しい順)の一覧の写し。 */
     public List<Entry> list(String player) {
         return List.copyOf(players.getOrDefault(player, List.of()));

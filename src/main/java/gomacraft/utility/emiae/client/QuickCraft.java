@@ -39,7 +39,7 @@ import org.lwjgl.glfw.GLFW;
  *   <li><b>Alt + クリック</b>({@link #KEY}): アイテムの在庫があれば 1 スタックをインベントリへ。無くて作れるなら、1 回分の数で
  *       計画の画面を開く(数の画面を飛ばす)。</li>
  *   <li><b>Alt + Shift + クリック</b>: 作れるなら 1 スタック分の数で計画の画面を開く。作れなくて在庫があれば取り出す。</li>
- *   <li>Alt + クリック・Alt + Shift + クリックは、設定 {@link QuickCraftSettings#ALT_CLICK}(既定は切)を入にしたときだけ効く。</li>
+ *   <li>Alt + クリック・Alt + Shift + クリックは、設定 {@link QuickCraftSettings#ALT_CLICK}(既定は入)が入のときだけ効く。</li>
  *   <li>設定 {@link QuickCraftSettings#SKIP_CONFIRM}(既定は切)を入にしたときだけ、計画の画面も飛ばして「すぐ始める」で作る
  *       (材料が足りなければ計画の画面が残る)。</li>
  *   <li>パターンが無く、作業台のレシピで材料が揃うアイテムは {@link GridCraft}(計画の画面が無いので今の形)。</li>
