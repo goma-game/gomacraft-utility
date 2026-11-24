@@ -81,8 +81,17 @@ public final class SettingsScreen extends OptionsSubScreen {
         this.list.addSmall(toggles.toArray(OptionInstance<?>[]::new));
     }
 
+    /** 見出しの高さ(ボタンと同じ。字を行の中ほどに置き、上下のボタンとの間を揃える)。 */
+    private static final int HEADER_HEIGHT = 20;
+    /** 見出しの幅(左右 2 列のボタンの幅の合計。字は真ん中)。 */
+    private static final int HEADER_WIDTH = 310;
+
+    /**
+     * 見出し。⚠ 字の高さ(9)のまま置くと、行の上の端に寄って上のボタンに近すぎ、下のボタンから遠い(3 回目の確かめの 4)。
+     * ボタンと同じ高さにして、字を中ほどに置く。
+     */
     private void header(String key) {
-        this.list.addSmall(new StringWidget(Component.translatable(key), this.font), null);
+        this.list.addSmall(new StringWidget(HEADER_WIDTH, HEADER_HEIGHT, Component.translatable(key), this.font), null);
     }
 
     /** 機能の説明: 何をするか、今の状態(起動のときに決まったもの)、変えたら起動し直すこと。 */
@@ -118,7 +127,10 @@ public final class SettingsScreen extends OptionsSubScreen {
         }
         ClientSettings.Choice c = (ClientSettings.Choice) setting;
         return (OptionInstance<T>) new OptionInstance<>(caption, OptionInstance.cachedConstantTooltip(help),
-                (label, value) -> Options.genericValueLabel(label, Component.translatable(caption + "." + value)),
+                // ⚠ 値だけを返す: 選ぶボタン(CycleButton)は自分で「名前: 値」にする。ここで名前を付けると
+                // 「投稿先: 投稿先: チャット」と二重になる(goma-org/gomabase#2295 の 3 回目の確かめの 3)。
+                // 数のスライダーは逆に、ここで返した文がそのまま出るので名前を付ける(上の Int)
+                (label, value) -> Component.translatable(caption + "." + value),
                 new OptionInstance.Enum<>(c.choices(), Codec.STRING), settings.get(c), value -> {
                     settings.set(c, value);
                     settingsChanged = true;
