@@ -109,6 +109,5 @@
   "gomacraft_utility.settings.emi_ae_quick_craft.alt_click.tooltip": "Alt + click an EMI item to take it (or craft it if missing). Alt + Shift + click crafts a stack.",
   "gomacraft_utility.feature.emi_search_history": "EMI",
   "gomacraft_utility.feature.emi_search_history.tooltip": "Shows the search history left of the EMI search box. It is shared with the AE2 terminal.",
-  "gomacraft_utility.search_sync.inverted": "Sync with EMI: %s (flipped)",
-  "gomacraft_utility.search_sync.normal": "Sync with EMI: %s"
+  "gomacraft_utility.search_sync.on": "Synced with EMI"
 }
