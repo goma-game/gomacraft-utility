@@ -18,7 +18,7 @@
   "gomacraft_utility.settings.tab.search": "Search",
   "gomacraft_utility.settings.tab.ae2_emi": "AE2 & EMI",
   "gomacraft_utility.settings.tab.screenshot": "Screenshots",
-  "gomacraft_utility.settings.tab.text": "Text",
+  "gomacraft_utility.settings.tab.text": "Translation",
   "gomacraft_utility.settings.tab.dev": "Developer",
   "gomacraft_utility.settings.tab.other": "Other",
   "gomacraft_utility.settings.group.english_name": "English name search",
@@ -60,7 +60,7 @@
   "gomacraft_utility.feature.compass_search_history.tooltip": "Shows the search history next to the Nature's / Explorer's Compass search box.",
   "gomacraft_utility.feature.explorerscompass_search": "Explorer's Compass",
   "gomacraft_utility.feature.explorerscompass_search.tooltip": "Explorer's Compass search also matches English and mod names.",
-  "gomacraft_utility.feature.mcjtylib_text": "RFTools text",
+  "gomacraft_utility.feature.mcjtylib_text": "RFTools translation",
   "gomacraft_utility.feature.mcjtylib_text.tooltip": "Translates hard-coded English in RFTools-family and XNet screens.",
   "gomacraft_utility.feature.emi_ae_stock": "Stock counts",
   "gomacraft_utility.feature.emi_ae_stock.tooltip": "Shows AE network stock counts and \"+\" for craftable items in EMI.",
@@ -81,7 +81,7 @@
   "gomacraft_utility.feature.screenshot_share": "Post to Discord",
   "gomacraft_utility.feature.screenshot_share.tooltip": "Adds a button to post screenshots to Discord in the chat.",
   "key.gomacraft_utility.ae2_fill_search": "Send hovered item to AE2 terminal search",
-  "gomacraft_utility.search_history.hint": "Left: search  Right: delete\nMiddle / Shift+Left: ★\nWheel: older",
+  "gomacraft_utility.search_history.hint": "Left: search  Right: delete\nMiddle: ★",
   "gomacraft_utility.screenshot.button": "[Post to Discord]",
   "gomacraft_utility.screenshot.button.hover": "Post this screenshot to Discord under your name. Hold %s to choose the channel.",
   "gomacraft_utility.screenshot.choose.title": "Where to post this screenshot?",
@@ -109,6 +109,5 @@
   "gomacraft_utility.settings.emi_ae_quick_craft.alt_click.tooltip": "Alt + click an EMI item to take it (or craft it if missing). Alt + Shift + click crafts a stack.",
   "gomacraft_utility.feature.emi_search_history": "EMI",
   "gomacraft_utility.feature.emi_search_history.tooltip": "Shows the search history left of the EMI search box. It is shared with the AE2 terminal.",
-  "gomacraft_utility.search_sync.inverted": "Sync with EMI: %s (flipped, blue outline)",
-  "gomacraft_utility.search_sync.normal": "Sync with EMI: %s (as configured)"
+  "gomacraft_utility.search_sync.on": "Synced with EMI"
 }

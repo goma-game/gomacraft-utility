@@ -18,7 +18,7 @@
   "gomacraft_utility.settings.tab.search": "検索",
   "gomacraft_utility.settings.tab.ae2_emi": "AE2・EMI",
   "gomacraft_utility.settings.tab.screenshot": "スクショ",
-  "gomacraft_utility.settings.tab.text": "訳",
+  "gomacraft_utility.settings.tab.text": "翻訳",
   "gomacraft_utility.settings.tab.dev": "開発者",
   "gomacraft_utility.settings.tab.other": "その他",
   "gomacraft_utility.settings.group.english_name": "英語名で検索",
@@ -60,7 +60,7 @@
   "gomacraft_utility.feature.compass_search_history.tooltip": "Nature's Compass・Explorer's Compass の検索欄の横に、検索語の履歴を出します。",
   "gomacraft_utility.feature.explorerscompass_search": "Explorer's Compass",
   "gomacraft_utility.feature.explorerscompass_search.tooltip": "Explorer's Compass の検索で、英語名・Mod 名でも当たるようにします。",
-  "gomacraft_utility.feature.mcjtylib_text": "RFTools 系の訳",
+  "gomacraft_utility.feature.mcjtylib_text": "RFTools 系の日本語訳",
   "gomacraft_utility.feature.mcjtylib_text.tooltip": "RFTools 系・XNet などの画面の、英語のままの文に訳を当てます。",
   "gomacraft_utility.feature.emi_ae_stock": "在庫数",
   "gomacraft_utility.feature.emi_ae_stock.tooltip": "EMI の一覧に、AE のネットワークの在庫数と、作れるアイテムの「+」を出します。",
@@ -81,7 +81,7 @@
   "gomacraft_utility.feature.screenshot_share": "Discord に投稿",
   "gomacraft_utility.feature.screenshot_share.tooltip": "スクショを撮ったときのチャットに、Discord に投稿するボタンを出します。",
   "key.gomacraft_utility.ae2_fill_search": "マウスの下のアイテムを AE2 のターミナルの検索欄へ送る",
-  "gomacraft_utility.search_history.hint": "左: 検索  右: 削除\n中・Shift+左: ★\nホイール: 遡る",
+  "gomacraft_utility.search_history.hint": "左: 検索  右: 削除\n中: ★",
   "gomacraft_utility.screenshot.button": "[Discord に投稿]",
   "gomacraft_utility.screenshot.button.hover": "このスクショをあなたの名前で Discord に投稿します。%s を押しながら押すと投稿先を選べます。",
   "gomacraft_utility.screenshot.choose.title": "このスクショをどこに投稿しますか?",
@@ -109,6 +109,5 @@
   "gomacraft_utility.settings.emi_ae_quick_craft.alt_click.tooltip": "EMI のアイテムを Alt+クリックで取り出します(無ければ作ります)。Alt+Shift+クリックで 1 スタック分作ります。",
   "gomacraft_utility.feature.emi_search_history": "EMI",
   "gomacraft_utility.feature.emi_search_history.tooltip": "EMI の検索欄の左に、検索語の履歴を出します。履歴は AE2 のターミナルと同じです。",
-  "gomacraft_utility.search_sync.inverted": "EMI との同期: %s(反転中。青い枠)",
-  "gomacraft_utility.search_sync.normal": "EMI との同期: %s(設定どおり)"
+  "gomacraft_utility.search_sync.on": "EMI と同期"
 }

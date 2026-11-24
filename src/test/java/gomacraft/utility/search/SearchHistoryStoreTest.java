@@ -16,6 +16,26 @@ class SearchHistoryStoreTest {
         return store.list(player).stream().map(SearchHistoryStore.Entry::text).toList();
     }
 
+    /** 2 つのコンパスで 1 つだった帳を分けても、今の記録を失わない(5 回目の確かめ。分けた後の記録も上書きしない)。 */
+    @Test
+    void splitScopeKeepsTheOldEntriesInEveryNewScope() {
+        SearchHistoryStore store = new SearchHistoryStore();
+        store.record("p#compass", "plains");
+        store.record("p#compass", "village");
+        store.record("q#explorerscompass", "mansion");
+        store.record("q#compass", "desert");
+        assertTrue(store.splitScope("compass", List.of("naturescompass", "explorerscompass")));
+        assertEquals(List.of("village", "plains"), texts(store, "p#naturescompass"));
+        assertEquals(List.of("village", "plains"), texts(store, "p#explorerscompass"));
+        assertEquals(List.of(), texts(store, "p#compass"), "元の帳は消す(次の起動で写し直さない)");
+        assertEquals(List.of("desert"), texts(store, "q#naturescompass"));
+        assertEquals(List.of("mansion"), texts(store, "q#explorerscompass"), "既に在る帳は上書きしない");
+        assertFalse(store.splitScope("compass", List.of("naturescompass", "explorerscompass")), "2 度目は何もしない");
+        // 写した帳は別のもの(片方へ記しても、もう片方は変わらない)
+        store.record("p#naturescompass", "forest");
+        assertEquals(List.of("village", "plains"), texts(store, "p#explorerscompass"));
+    }
+
     @Test
     void recentFirstAndDuplicatesMoveUp() {
         SearchHistoryStore store = new SearchHistoryStore();

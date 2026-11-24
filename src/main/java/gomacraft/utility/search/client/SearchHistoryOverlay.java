@@ -41,7 +41,7 @@ import org.lwjgl.glfw.GLFW;
  *   <li>記すのは、欄の focus が外れたとき(Enter・欄の外を押す、など)・Enter・履歴の語を使ったとき・画面を閉じたとき
  *       (打つ 1 字ごとには記さない。契機の決め方は {@link FocusRecorder})。</li>
  *   <li>幅は字の長さで変えない。はみ出す語は「…」で切り、カーソルを合わせた行・↑↓で選んだ行は横に流して全文を見せる。</li>
- *   <li>左で使う、右で消す、Shift + 左か中でお気に入りを付け外し。↑↓で選び、Enter で使う。操作の案内は広げたときに出す。</li>
+ *   <li>左で使う、右で消す、中でお気に入りを付け外し(ホイールで遡れるが、案内の行には出さない)。↑↓で選び、Enter で使う。操作の案内は広げたときに出す。</li>
  *   <li>履歴は手元の {@code config/gomacraft_utility/search_history.json} に置く(サーバには送らない)。ファイルは 1 つで、
  *       ウィンドウごとに別の帳({@code scope})を持つ(アイテムの語とバイオームの語を混ぜない。AE2 と EMI は同じ帳)。</li>
  * </ul>
@@ -184,6 +184,22 @@ public final class SearchHistoryOverlay {
             store = SearchHistoryStore.load(file, SearchHistorySettings.KEEP.max());
         } catch (Exception e) {
             throw new IllegalStateException("search history unreadable: " + FeatureRegistry.describe(e), e);
+        }
+    }
+
+    /**
+     * 帳を分ける({@link SearchHistoryStore#splitScope})。分けたら書く。書けなければ警告だけにする(分けた中身は手元の
+     * 覚えにあり、次に記すときに書く)。
+     */
+    static synchronized void splitScope(String from, List<String> to) {
+        if (store == null || !store.splitScope(from, to)) {
+            return;
+        }
+        try {
+            store.save(file);
+        } catch (Exception e) {
+            LOGGER.warn("gomacraft_utility: 検索語の履歴を書けない(帳を分けた分は次に記すときに書く): {}",
+                    FeatureRegistry.describe(e));
         }
     }
 
@@ -576,13 +592,12 @@ public final class SearchHistoryOverlay {
             return false;
         }
         String text = box.rows().get(index - box.first()).text();
-        boolean shift = Screen.hasShiftDown();
         if (button == GLFW.GLFW_MOUSE_BUTTON_RIGHT) {
             if (store.remove(player(), text)) {
                 save();
             }
-        } else if (button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE
-                || (button == GLFW.GLFW_MOUSE_BUTTON_LEFT && shift)) {
+        } else if (button == GLFW.GLFW_MOUSE_BUTTON_MIDDLE) {
+            // お気に入りは中クリックだけ(5 回目の確かめ —— Shift + 左はやめた)
             if (store.toggleFavorite(player(), text)) {
                 save();
             }
