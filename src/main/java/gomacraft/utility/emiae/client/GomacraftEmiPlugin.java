@@ -16,6 +16,8 @@ import gomacraft.utility.emiae.EmiAeFeatures;
 public final class GomacraftEmiPlugin implements EmiPlugin {
     @Override
     public void register(EmiRegistry registry) {
-        Features.guard(EmiAeFeatures.CRAFT_CONFIRM, () -> CraftConfirmBounds.register(registry));
+        // EMI の読み直しのたびに呼ばれる。止めている間に呼ばれても、動かし直したら効くように、止めているかは見ない
+        // (中身は CraftConfirmBounds が毎回 guard で分ける)
+        Features.registry().guardLoaded(EmiAeFeatures.CRAFT_CONFIRM, () -> CraftConfirmBounds.register(registry));
     }
 }

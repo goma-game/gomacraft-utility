@@ -93,7 +93,10 @@ public final class FeatureConfig {
         return TomlLines.update(text, Map.of("features", values));
     }
 
-    /** 設定のファイルの値を書き換える(無ければ既定の中身から作る)。効くのは次の起動から(mixin の当否は起動で決まる)。 */
+    /**
+     * 設定のファイルの値を書き換える(無ければ既定の中身から作る)。ファイルが決めるのは次の起動の状態(mixin の当否)。
+     * 遊んでいる間に止める・動かすのは、設定の画面が {@link FeatureRegistry#setActive} で別にする。
+     */
     public static void write(Path configDir, List<? extends Feature> features, Map<String, Boolean> changes)
             throws IOException {
         Path file = configDir.resolve(FILE_NAME);
@@ -107,7 +110,8 @@ public final class FeatureConfig {
         StringBuilder sb = new StringBuilder();
         sb.append("# gomacraft_utility の機能ごとの切り替え(true = 使う / false = 切る)。\n");
         sb.append("# 書いていない機能は既定の値を使う。値が true / false でない機能は切る。\n");
-        sb.append("# 変えたらゲームを起動し直す(mixin の当否は起動のときに決まる)。\n");
+        sb.append("# ここを手で書き換えたら、ゲームを起動し直す(mixin の当否は起動のときに決まる)。\n");
+        sb.append("# ゲームの中の設定の画面で切った機能は、その場で止まる(入れ直してもその場で動く)。\n");
         sb.append("[features]\n");
         for (Feature f : features) {
             sb.append(f.id()).append(" = ").append(f.enabledByDefault()).append('\n');

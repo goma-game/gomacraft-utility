@@ -112,10 +112,23 @@ public final class ShareClient {
         // ほかの Mod がファイルを差し替えた後の名前を使うため、いちばん後に聞く
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ScreenshotEvent.class,
                 event -> Features.guard(ScreenshotFeatures.SHARE, () -> onScreenshot(event)));
+        // コマンドはワールドに入るたびに登録し直される。止めている間に入っても、動かし直したら効くように、止めているかは
+        // 見ない(コマンドの中身は guard で分ける)
         NeoForge.EVENT_BUS.addListener(RegisterClientCommandsEvent.class,
-                event -> Features.guard(ScreenshotFeatures.SHARE, () -> registerCommand(event)));
+                event -> Features.registry().guardLoaded(ScreenshotFeatures.SHARE, () -> registerCommand(event)));
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class,
                 event -> Features.guard(ScreenshotFeatures.SHARE, ShareClient::tick));
+        // 設定の画面で止めた・動かし直した: 送っている途中・返事の待ちを捨てる(止めている間に終わった読み込みや返事は
+        // guard の中で受けられず、残すと「送っている途中」のまま次を断り続ける)。動かし直したら設定を読み直す
+        // (止めている間の設定の変更は、上の onChange が受けていない)
+        Features.registry().onActiveChange(ScreenshotFeatures.SHARE, active -> {
+            sending = null;
+            loading = false;
+            AWAITING.clear();
+            if (active) {
+                settings = ShareSettings.from(client);
+            }
+        });
     }
 
     /** つないだサーバが受けるか(専用サーバで、口を開いているときだけ)。 */
@@ -204,8 +217,11 @@ public final class ShareClient {
         loading = true;
         Minecraft mc = Minecraft.getInstance();
         CompletableFuture.supplyAsync(() -> load(file), Util.backgroundExecutor())
-                .whenComplete((data, error) -> mc.execute(() -> Features.guard(ScreenshotFeatures.SHARE, () -> {
+                .whenComplete((data, error) -> mc.execute(() -> {
+                    // 止めている間に終わっても、読み込みの印は下ろす(guard の外。残すと次の投稿を断り続ける)
                     loading = false;
+                }))
+                .whenComplete((data, error) -> mc.execute(() -> Features.guard(ScreenshotFeatures.SHARE, () -> {
                     if (error != null || data == null || data.isEmpty()) {
                         say("gomacraft_utility.screenshot.unreadable",
                                 "Could not read the screenshot, or it is too large to send.");

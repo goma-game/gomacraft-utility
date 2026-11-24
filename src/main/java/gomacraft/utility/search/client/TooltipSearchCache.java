@@ -63,6 +63,12 @@ public final class TooltipSearchCache {
                 event -> Features.guard(SearchFeatures.AE2_TOOLTIP_SEARCH_CACHE, TooltipSearchCache::warm));
         NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class,
                 event -> Features.guard(SearchFeatures.AE2_TOOLTIP_SEARCH_CACHE, TooltipSearchCache::reset));
+        // 設定の画面で動かし直した: 止めている間は抜けたときの片付け(上)が走らないので、前の作り置きを捨てる
+        Features.registry().onActiveChange(SearchFeatures.AE2_TOOLTIP_SEARCH_CACHE, active -> {
+            if (active) {
+                reset();
+            }
+        });
     }
 
     /** AE2 の検索が使う、端末をまたぐ作り置き(描画の thread からだけ使う)。 */

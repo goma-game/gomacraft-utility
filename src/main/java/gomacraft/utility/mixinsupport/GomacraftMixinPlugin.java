@@ -49,7 +49,8 @@ public final class GomacraftMixinPlugin implements IMixinConfigPlugin {
             return false;
         }
         FeatureRegistry registry = Features.registry();
-        if (!registry.isOn(feature)) {
+        // 起動のときの状態で決める(止めている・いないは、当てた後の中身が見る)
+        if (!registry.isLoaded(feature)) {
             return false;
         }
         if (ClassInfo.forName(targetClassName) == null) {
@@ -73,7 +74,7 @@ public final class GomacraftMixinPlugin implements IMixinConfigPlugin {
         }
         for (Map.Entry<String, Set<String>> entry : targets.entrySet()) {
             for (String target : entry.getValue()) {
-                if (!registry.isOn(entry.getKey())) {
+                if (!registry.isLoaded(entry.getKey())) {
                     break;
                 }
                 try {

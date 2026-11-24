@@ -94,6 +94,8 @@ public final class QuickCraft {
         }));
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class,
                 event -> Features.guard(EmiAeFeatures.QUICK_CRAFT, QuickCraft::tick));
+        // 設定の画面で止めた: 数の画面への数の入れの待ちを捨てる(止めている間は tick が走らず、期限で捨てられない)
+        Features.registry().onActiveChange(EmiAeFeatures.QUICK_CRAFT, active -> pending = null);
     }
 
     /** EMI がクリックを扱う前に呼ばれる(mixin)。この操作で扱ったら true(EMI には渡さない)。 */

@@ -48,48 +48,58 @@ class SettingsLangTest {
         assertTrue(missing.isEmpty(), "設定の画面に出す機能の名前の訳が無い: " + missing);
     }
 
-    /** ボタンの字が使える幅(Button の幅 150 から、左右の 2 ずつ)。 */
-    private static final int LABEL_WIDTH = 146;
-
     /**
-     * ボタンの名前は短い語で、説明はツールチップに置く(長い名前はボタンからはみ出して読めない —— goma-org/gomabase#2295 の
-     * 2 回目の確かめの 5)。「名前: 値」の幅を、Minecraft の既定の書体の幅で見積もる(全角は 9、英数は 6 で、狭い字は
-     * 狭く数える)。⚠ 見積もりで、TTF の書体に替えた画面の幅は見ていない。
+     * 設定の画面の並び({@link SettingsLayout})の名前が短い語で、行に収まること(長い名前は右の操作に重なって読めない ——
+     * goma-org/gomabase#2295 の 2 回目の確かめの 5)。名前の幅は行の幅から、字下げ(木の深さ)・右の操作・余白を引いた残り。
+     * 選ぶ語(<鍵>.<語>)は右の操作に収まること。機能と項目にはツールチップが要る(説明はそこに置く)。幅は Minecraft の
+     * 既定の書体の幅で見積もる(全角は 9、英数は 6 で、狭い字は狭く数える)。⚠ 見積もりで、TTF の書体に替えた画面の幅は
+     * 見ていない。
      */
     @Test
-    void everyLabelHasATooltipAndFitsTheButton() throws Exception {
+    void everyLabelHasATooltipAndFitsTheRow() throws Exception {
+        List<String> shown = new ArrayList<>();
+        for (Feature f : Features.catalog(false)) {
+            if (f.shownInClientSettings()) {
+                shown.add(f.id());
+            }
+        }
+        List<SettingsLayout.Tab> tabs = SettingsLayout.build(shown, declaredSettings());
         List<String> problems = new ArrayList<>();
         for (String name : List.of("en_us", "ja_jp")) {
             JsonObject json = lang(name);
-            String on = name.equals("ja_jp") ? "オン" : "ON";
-            String off = name.equals("ja_jp") ? "オフ" : "OFF";
-            List<String> labels = new ArrayList<>();
-            for (Feature f : Features.catalog(false)) {
-                if (f.shownInClientSettings()) {
-                    labels.add("gomacraft_utility.feature." + f.id());
+            for (SettingsLayout.Tab tab : tabs) {
+                if (!json.has(tab.labelKey())) {
+                    problems.add(name + ": タブの名前の訳が無い: " + tab.labelKey());
                 }
-            }
-            for (ClientSettings.Setting<?> setting : declaredSettings()) {
-                labels.add(setting.translationKey());
-            }
-            for (String key : labels) {
-                if (!json.has(key)) {
-                    problems.add(name + ": 名前の訳が無い: " + key);
-                    continue;
-                }
-                if (!json.has(key + ".tooltip")) {
-                    problems.add(name + ": ツールチップが無い: " + key);
-                }
-                // 値: 選ぶ語(<鍵>.<語>)があればその一番長いもの、無ければ入り切りか数(1000 まで)
-                int value = Math.max(width(on), Math.max(width(off), width("1000")));
-                for (String other : json.keySet()) {
-                    if (other.startsWith(key + ".") && !other.equals(key + ".tooltip")) {
-                        value = Math.max(value, width(json.get(other).getAsString()));
+                SettingsLayout.walk(tab.nodes(), 0, (node, depth) -> {
+                    String key = node.labelKey();
+                    if (!json.has(key)) {
+                        problems.add(name + ": 名前の訳が無い: " + key);
+                        return;
                     }
-                }
-                int total = width(json.get(key).getAsString()) + width(": ") + value;
-                if (total > LABEL_WIDTH) {
-                    problems.add(name + ": " + key + " の名前が長い(見積もり " + total + " > " + LABEL_WIDTH + ")");
+                    if (node.tooltipKey() != null && !json.has(node.tooltipKey())) {
+                        problems.add(name + ": ツールチップが無い: " + key);
+                    }
+                    int room = SettingsLayout.ROW_WIDTH - SettingsLayout.GAP * 3 - depth * SettingsLayout.INDENT
+                            - SettingsLayout.CONTROL_WIDTH;
+                    int label = width(json.get(key).getAsString());
+                    if (label > room) {
+                        problems.add(name + ": " + key + " の名前が長い(見積もり " + label + " > " + room + ")");
+                    }
+                    for (String other : json.keySet()) {
+                        if (other.startsWith(key + ".") && !other.equals(key + ".tooltip")
+                                && width(json.get(other).getAsString()) > SettingsLayout.CONTROL_WIDTH - 8) {
+                            problems.add(name + ": " + other + " の語が操作に収まらない");
+                        }
+                    }
+                });
+            }
+            for (String key : List.of("gomacraft_utility.settings.group.status", "gomacraft_utility.settings.restart",
+                    "gomacraft_utility.settings.undo", "gomacraft_utility.settings.reset",
+                    "gomacraft_utility.settings.search", "gomacraft_utility.settings.unavailable",
+                    "gomacraft_utility.settings.failed", "gomacraft_utility.settings.suspended")) {
+                if (!json.has(key)) {
+                    problems.add(name + ": 画面の語の訳が無い: " + key);
                 }
             }
         }
