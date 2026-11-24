@@ -84,7 +84,11 @@ public final class SettingsScreen extends Screen {
     private String currentTab;
     private String query = "";
     private boolean committed;
+    /** init の中でタブを選び直している(検索を消さない)。 */
+    private boolean laying;
 
+    /** いま並んでいる機能・項目(「既定に戻す」の的)。 */
+    private final List<SettingsLayout.Node> shown = new ArrayList<>();
     private RowList list;
     private EditBox search;
     private Row hovered;
@@ -132,8 +136,14 @@ public final class SettingsScreen extends Screen {
             @Override
             public void setCurrentTab(Tab tab, boolean playSound) {
                 super.setCurrentTab(tab, playSound);
-                if (tab instanceof NamedTab named && !named.id.equals(currentTab)) {
+                // 検索中にタブを押したら、検索をやめてそのタブを見せる(検索の結果は全部のタブにまたがるため)
+                // (init の中で選び直すとき —— 窓の大きさを変えたとき —— は検索を残す)
+                if (!laying && tab instanceof NamedTab named && (!named.id.equals(currentTab) || searching())) {
                     currentTab = named.id;
+                    query = "";
+                    if (search != null) {
+                        search.setValue("");
+                    }
                     rebuild(true);
                 }
             }
@@ -153,7 +163,9 @@ public final class SettingsScreen extends Screen {
             }
         }
         if (!named.isEmpty()) {
+            laying = true;
             bar.selectTab(selected, false);
+            laying = false;
         }
         int top = bar.getRectangle().bottom() + 4;
 
@@ -193,33 +205,20 @@ public final class SettingsScreen extends Screen {
         rebuild(false);
     }
 
-    /** 見えている項目の木(タブか、検索の結果)。 */
-    private List<SettingsLayout.Node> visibleNodes() {
-        List<SettingsLayout.Node> out = new ArrayList<>();
-        for (SettingsLayout.Tab tab : tabs) {
-            if (searching() || tab.id().equals(currentTab)) {
-                out.addAll(tab.nodes());
-            }
-        }
-        return out;
-    }
-
     private boolean searching() {
         return !query.isBlank();
     }
 
+    /** 「既定に戻す」: いま並んでいる項目だけ(触れない機能は除く —— 並べるときに {@link #shown} へ集める)。 */
     private void resetVisible() {
-        SettingsLayout.walk(visibleNodes(), 0, (node, depth) -> {
-            if (searching() && !matchesOrHasMatch(node)) {
-                return;
-            }
+        for (SettingsLayout.Node node : shown) {
             switch (node) {
                 case SettingsLayout.FeatureNode f -> features.put(f.featureId(), catalog.get(f.featureId()).enabledByDefault());
                 case SettingsLayout.SettingNode s -> values.put(s.setting(), s.setting().defaultValue());
                 case SettingsLayout.GroupNode g -> {
                 }
             }
-        });
+        }
     }
 
     // ---- 並べる ----
@@ -229,6 +228,7 @@ public final class SettingsScreen extends Screen {
             return;
         }
         double scroll = list.getScrollAmount();
+        shown.clear();
         List<Row> rows = new ArrayList<>();
         for (SettingsLayout.Tab tab : tabs) {
             if (searching()) {
@@ -267,10 +267,14 @@ public final class SettingsScreen extends Screen {
             switch (node) {
                 case SettingsLayout.FeatureNode f -> {
                     String id = f.featureId();
+                    if (usable(id)) {
+                        shown.add(node);
+                    }
                     rows.add(new ControlRow(node, depth, parent, featureButton(id), usable(id), failed(id)));
                     childEnabled = () -> parent.getAsBoolean() && usable(id) && Boolean.TRUE.equals(features.get(id));
                 }
                 case SettingsLayout.SettingNode s -> {
+                    shown.add(node);
                     rows.add(new ControlRow(node, depth, parent, settingControl(s.setting()), true, false));
                     ClientSettings.Setting<?> setting = s.setting();
                     childEnabled = () -> parent.getAsBoolean()
@@ -432,11 +436,13 @@ public final class SettingsScreen extends Screen {
         if (!featureChanges.isEmpty()) {
             try {
                 FeatureConfig.write(FMLPaths.CONFIGDIR.get(), List.copyOf(catalog.values()), featureChanges);
+                // 起動のときに有効だった機能は、その場で止める・動かす(起動の状態の 1 行は変えない)。書けなかったら
+                // 動きも変えない(次に開いた画面がファイルの値を見せるので、画面と動きを食い違わせない)
+                featureChanges.forEach(registry::setActive);
             } catch (IOException e) {
-                LOGGER.warn("gomacraft_utility: 機能の入り切りを書けない: {}", e.toString());
+                LOGGER.warn("gomacraft_utility: 機能の入り切りを書けない(その場の入り切りもしない): {}", e.toString());
+                featureChanges.clear();
             }
-            // 起動のときに有効だった機能は、その場で止める・動かす(起動の状態の 1 行は変えない)
-            featureChanges.forEach(registry::setActive);
         }
         boolean settingsChanged = false;
         for (Map.Entry<ClientSettings.Setting<?>, Object> e : values.entrySet()) {
