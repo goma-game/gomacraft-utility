@@ -15,8 +15,9 @@ import net.minecraft.client.gui.screens.Screen;
  * {@link SearchHistoryOverlay}(AE2 の端末と共通)。帳はコンパス用に別に持つ(アイテムの語とバイオーム・構造物の語を混ぜない)。
  *
  * <p>欄はそれぞれのコンパスの検索の機能({@code naturescompass_search}・{@code explorerscompass_search})の accessor で
- * 引く。⚠ その機能が有効かは描くたび・押すたびに見る(片方のコンパスの機能が後から FAILED になっても、もう片方のウィンドウは止めない
- * —— #21 のレビュー)。画面が accessor を持つか({@code instanceof})で見分けるので、コンパスの class を名前で持たない。
+ * 引く。⚠ その機能の accessor が当たっているか({@code isLoaded} —— 起動のときに有効で、壊れていない)は描くたび・押すたびに
+ * 見る(片方のコンパスの機能が後から FAILED になっても、もう片方のウィンドウは止めない —— #21 のレビュー)。設定の画面で
+ * 英語名の検索を止めただけなら、履歴は動かす。画面が accessor を持つか({@code instanceof})で見分けるので、コンパスの class を名前で持たない。
  * 出す件数・持つ件数は AE2 の端末の履歴と同じ設定({@code SearchHistorySettings})。
  */
 public final class CompassSearchHistory {
@@ -42,7 +43,9 @@ public final class CompassSearchHistory {
         SearchHistoryOverlay.Host natures = new SearchHistoryOverlay.Host() {
             @Override
             public EditBox field(Screen screen) {
-                return Features.registry().isOn(SearchFeatures.NATURESCOMPASS_SEARCH)
+                // accessor が当たっているかを問う(isLoaded)。⚠ isOn にしない: 英語名の検索を設定の画面で止めると、
+                // 履歴まで黙って止まる(英語名の検索を止めても accessor は当たったまま)
+                return Features.registry().isLoaded(SearchFeatures.NATURESCOMPASS_SEARCH)
                         && screen instanceof NaturesCompassScreenAccessor accessor
                         ? accessor.gomacraftUtility$searchField() : null;
             }
@@ -66,7 +69,7 @@ public final class CompassSearchHistory {
         SearchHistoryOverlay.Host explorers = new SearchHistoryOverlay.Host() {
             @Override
             public EditBox field(Screen screen) {
-                return Features.registry().isOn(SearchFeatures.EXPLORERSCOMPASS_SEARCH)
+                return Features.registry().isLoaded(SearchFeatures.EXPLORERSCOMPASS_SEARCH)
                         && screen instanceof ExplorersCompassScreenAccessor accessor
                         ? accessor.gomacraftUtility$searchField() : null;
             }

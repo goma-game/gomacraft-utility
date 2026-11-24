@@ -48,6 +48,8 @@
     - group は中の成功を合計で数えるので、2 つの injector で共有すると、片方が当て損ねても `on` のままになる。
     - L1 の `MixinContractTest` が、書き忘れと group の名前の重なりを落とす。mixin と MixinExtras の注釈は、`@At`・`@Slice`・`@Group` などの決まった部品を除いて、全部 injector として見る(知らない注釈を素通りさせない)。
   - mixin の中身と event の listener は `Features.guard("<機能>", () -> …)` で包む。有効でない機能は走らず、例外を投げた機能は FAILED になって、以後はその機能のどの部分も走らない(FAILED の機能の、当たってしまった残りの mixin を止める)。
+    - 起動のときに有効になった機能は、設定の画面から遊んでいる間に止める・動かし直せる(`FeatureRegistry#setActive`。起動の 1 行は変えず、FAILED にもしない)。だから `isOn` の答えを覚えて使い回さず、毎回問う。止めている間に溜まる古い作り置き・途中の操作の待ちは `onActiveChange` で捨てる。後から何度も呼ばれる登録の口(EMI の plugin・クライアントのコマンド)は、止めていても登録する `guardLoaded` で包み、中身を `guard` で分ける(止めている間に登録を飛ばすと、動かし直しても効かない)。別の機能の mixin(accessor など)が当たっているかを問うときは `isLoaded` で問う(`isOn` だと、その機能を止めただけで、こちらの機能まで黙って止まる)。起動のときに切ってあった機能は mixin が当たっていないので、入にしたら起動し直す(画面が「完了」のときに知らせる)。
+    - 設定の画面の並び(タブと木)は `settings/SettingsLayout` に置く。機能・項目を足したら、そこへ置く(置き忘れは「その他」のタブに並ぶ)。
     - ⚠ 元の処理を包む mixin(`@WrapMethod`・`@WrapOperation` の `original.call`)は、`original.call` を guard の中に入れない(guard が例外を飲み、元の処理の例外まで隠す)。`Features.registry().isOn("<機能>")` が偽なら足した処理をせずに `original.call` だけを呼ぶ形で分ける(例: `ttf_glyph_lock`)。
   - 当て先のクラスは、起動時の 1 行の前に読み込ませる(`GomacraftMixinPlugin.preloadTargets`。初期化はしない)。クラスを読み込んだだけで副作用のあるものに当てるなら、先にここで困らないかを確かめる。
   - 自己検査(gametest のサーバ)で当てる先の Mod を動かすときは `localRuntime` に足す(公式の maven が無い Mod は cursemaven —— gomabase の配布と同じ取得元)。

@@ -83,6 +83,8 @@ public final class ShareClient {
     private static boolean loading;
     /** 送り終えて返事を待っている送り → 札(主スレッドだけが触る)。 */
     private static final Map<Integer, String> AWAITING = new LinkedHashMap<>();
+    /** 止めた・動かし直した回数(その前に始めた読み込みの終わりを捨てる。主スレッドだけが触る)。 */
+    private static int generation;
 
     /** 各自の手元の設定(普通に押したときの行き先・選ぶ画面を出す修飾キー)。 */
     private static ShareSettings settings = ShareSettings.defaults();
@@ -112,10 +114,24 @@ public final class ShareClient {
         // ほかの Mod がファイルを差し替えた後の名前を使うため、いちばん後に聞く
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, ScreenshotEvent.class,
                 event -> Features.guard(ScreenshotFeatures.SHARE, () -> onScreenshot(event)));
+        // コマンドはワールドに入るたびに登録し直される。止めている間に入っても、動かし直したら効くように、止めているかは
+        // 見ない(コマンドの中身は guard で分ける)
         NeoForge.EVENT_BUS.addListener(RegisterClientCommandsEvent.class,
-                event -> Features.guard(ScreenshotFeatures.SHARE, () -> registerCommand(event)));
+                event -> Features.registry().guardLoaded(ScreenshotFeatures.SHARE, () -> registerCommand(event)));
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class,
                 event -> Features.guard(ScreenshotFeatures.SHARE, ShareClient::tick));
+        // 設定の画面で止めた・動かし直した: 送っている途中・返事の待ちを捨てる(止めている間に終わった読み込みや返事は
+        // guard の中で受けられず、残すと「送っている途中」のまま次を断り続ける)。動かし直したら設定を読み直す
+        // (止めている間の設定の変更は、上の onChange が受けていない)
+        Features.registry().onActiveChange(ScreenshotFeatures.SHARE, active -> {
+            generation++;
+            sending = null;
+            loading = false;
+            AWAITING.clear();
+            if (active) {
+                settings = ShareSettings.from(client);
+            }
+        });
     }
 
     /** つないだサーバが受けるか(専用サーバで、口を開いているときだけ)。 */
@@ -162,6 +178,12 @@ public final class ShareClient {
                 .then(Commands.argument("token", StringArgumentType.word())
                         .executes(context -> {
                             String token = StringArgumentType.getString(context, "token");
+                            if (Features.registry().isSuspended(ScreenshotFeatures.SHARE)) {
+                                // 止める前に出たボタンを押した: 黙って何もしないと、壊れたように見える
+                                say("gomacraft_utility.screenshot.stopped",
+                                        "Posting screenshots is turned off in the settings.");
+                                return 1;
+                            }
                             Features.guard(ScreenshotFeatures.SHARE, () -> choose(token));
                             return 1;
                         })));
@@ -202,10 +224,18 @@ public final class ShareClient {
             return;
         }
         loading = true;
+        int started = generation;
         Minecraft mc = Minecraft.getInstance();
         CompletableFuture.supplyAsync(() -> load(file), Util.backgroundExecutor())
-                .whenComplete((data, error) -> mc.execute(() -> Features.guard(ScreenshotFeatures.SHARE, () -> {
+                .whenComplete((data, error) -> mc.execute(() -> {
+                    // 止める・動かし直すより前に始めた読み込みの終わりは捨てる(印はそのときに下ろした。ここで触ると、
+                    // 動かし直した後の新しい読み込みの印を下ろし、送りを上書きする)
+                    if (started != generation) {
+                        return;
+                    }
+                    // 止めている間に終わっても、読み込みの印は下ろす(guard の外。残すと次の投稿を断り続ける)
                     loading = false;
+                    Features.guard(ScreenshotFeatures.SHARE, () -> {
                     if (error != null || data == null || data.isEmpty()) {
                         say("gomacraft_utility.screenshot.unreadable",
                                 "Could not read the screenshot, or it is too large to send.");
@@ -217,7 +247,8 @@ public final class ShareClient {
                     }
                     sending = new Sending(RANDOM.nextInt(Integer.MAX_VALUE), data.get(), 0, token, target);
                     say("gomacraft_utility.screenshot.sending", "Sending the screenshot...");
-                })));
+                    });
+                }));
     }
 
     /**

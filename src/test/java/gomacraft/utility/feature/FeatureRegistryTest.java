@@ -186,4 +186,44 @@ class FeatureRegistryTest {
                 List.of(feature("dup", true), feature("dup", true)), mods(Map.of()), FeatureConfig.empty(),
                 line -> { }));
     }
+
+    /**
+     * 設定の画面で止める・動かし直すのは、起動の 1 行(gomabase の起動の検証が読む)を変えず、FAILED にもしない。
+     * 起動のときに切ってあった機能は、その場では動かない(mixin が当たっていない)。
+     */
+    @Test
+    void suspendingKeepsTheStatusLineAndNeverMarksFailed() {
+        List<String> lines = new ArrayList<>();
+        FeatureRegistry registry = FeatureRegistry.evaluate(
+                List.of(feature("live", true), feature("cut", true), feature("broken", true),
+                        feature("cut_missing", true, Requirement.of("nothere"))), mods(Map.of()),
+                FeatureConfig.parse("[features]\ncut = false\ncut_missing = false\n"), lines::add);
+        registry.emit();
+        String bootLine = registry.line();
+        List<Boolean> hook = new ArrayList<>();
+        registry.onActiveChange("live", hook::add);
+
+        assertTrue(registry.setActive("live", false));
+        assertFalse(registry.isOn("live"));
+        assertTrue(registry.isLoaded("live"));
+        boolean[] ran = {false};
+        assertFalse(registry.guard("live", () -> ran[0] = true));
+        assertFalse(ran[0], "止めている間は中身を走らせない");
+        assertEquals(bootLine, registry.line(), "止めても起動の 1 行は変えない");
+        assertEquals(1, lines.size(), "止めても行を出し直さない");
+
+        assertTrue(registry.setActive("live", true));
+        assertTrue(registry.isOn("live"));
+        assertEquals(List.of(false, true), hook);
+
+        assertFalse(registry.setActive("cut", true), "起動のときに切ってあった機能は起動し直すまで動かない");
+        assertFalse(registry.isOn("cut"));
+        assertTrue(registry.enableableByRestart("cut"));
+        assertFalse(registry.enableableByRestart("cut_missing"), "要る Mod が無ければ、起動し直しても有効にならない");
+
+        registry.markFailed("broken", "boom");
+        assertFalse(registry.setActive("broken", true), "動かし直しても FAILED は消えない");
+        assertFalse(registry.isOn("broken"));
+        assertFalse(registry.enableableByRestart("broken"));
+    }
 }

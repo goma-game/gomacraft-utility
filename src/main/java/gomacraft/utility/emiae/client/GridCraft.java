@@ -58,6 +58,8 @@ public final class GridCraft {
     public static void init(IEventBus modBus) {
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class,
                 event -> Features.guard(EmiAeFeatures.GRID_CRAFT, GridCraft::tick));
+        // 設定の画面で止めた・動かし直した: 出来上がりの待ちを捨てる(古い画面を持ち続けず、期限切れの知らせも出さない)
+        Features.registry().onActiveChange(EmiAeFeatures.GRID_CRAFT, active -> pending = null);
     }
 
     /**

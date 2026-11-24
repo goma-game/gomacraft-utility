@@ -12,25 +12,44 @@ import java.util.regex.Pattern;
 import org.apache.maven.artifact.versioning.DefaultArtifactVersion;
 import org.apache.maven.artifact.versioning.InvalidVersionSpecificationException;
 import org.apache.maven.artifact.versioning.VersionRange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * 機能の一覧と、その状態。
  *
  * <p>状態は 1 回だけ決める(mixin の当否を決める時点で、対象の Mod の有無と版・設定から)。その後に変わるのは
  * 「壊れた」(FAILED)への変化だけ。起動時の 1 行を出した後に変われば、同じ形の行をもう一度出す。
+ *
+ * <p>起動のときに有効になった機能は、遊んでいる間に止めて、また動かせる({@link #setActive} —— 設定の画面から)。
+ * 止めている間は {@link #isOn} が偽になり、守り({@link #guard})の中身は走らない。止めることは状態ではないので、
+ * 起動時の 1 行({@link #line})にも {@link #status} にも出さない(起動のときに決まった {@code on} のまま —— gomabase の
+ * 起動の検証との約束を変えない)。止めても FAILED にはならず、動かし直しても FAILED は消えない。
+ * 起動のときに有効でなかった機能は mixin が当たっていないので、動かすには起動し直す。
+ *
+ * <p>⚠ {@link #isOn} の答えを覚えて使い回さない(止めたのが効かなくなる)。毎回問う。
  */
 public final class FeatureRegistry {
     private static final Pattern ID = Pattern.compile("[a-z0-9_]+");
     private static final Pattern RANGE = Pattern.compile("[\\[(][^\\[\\]()]*[\\])](,[\\[(][^\\[\\]()]*[\\])])*");
+    private static final Logger LOGGER = LoggerFactory.getLogger("gomacraft_utility");
 
     private final List<Feature> features;
     private final Map<String, FeatureStatus> statuses;
     private final Consumer<String> sink;
+    /** 起動の後に止めた機能(起動のときに有効になったものだけ)。 */
+    private final Set<String> suspended = new HashSet<>();
+    /** 止めた・動かし直したときに呼ぶもの(機能 → 呼ぶもの)。 */
+    private final Map<String, List<Consumer<Boolean>>> hooks = new LinkedHashMap<>();
+    /** 設定で入にして起動し直せば有効になる機能({@link #enableableByRestart})。 */
+    private final Set<String> restartable;
     private boolean emitted;
 
-    private FeatureRegistry(List<Feature> features, Map<String, FeatureStatus> statuses, Consumer<String> sink) {
+    private FeatureRegistry(List<Feature> features, Map<String, FeatureStatus> statuses, Set<String> restartable,
+            Consumer<String> sink) {
         this.features = features;
         this.statuses = statuses;
+        this.restartable = restartable;
         this.sink = sink;
     }
 
@@ -49,11 +68,19 @@ public final class FeatureRegistry {
             boolean dedicatedServer) {
         Set<String> seen = new HashSet<>();
         Map<String, FeatureStatus> statuses = new LinkedHashMap<>();
+        Set<String> restartable = new HashSet<>();
         for (Feature f : features) {
             if (!ID.matcher(f.id()).matches() || !seen.add(f.id())) {
                 throw new IllegalArgumentException("機能の名前が不正か重なっている: " + f.id());
             }
             FeatureStatus status = decide(f, mods, config);
+            // 設定で切ってあった(値が読めなかった)機能が、入にして起動し直せば有効になるか(要る Mod と版、効く側も見る)
+            boolean byConfig = status.state() == FeatureState.OFF && status.reason() != null
+                    && (status.reason().equals("disabled") || status.reason().startsWith("config "));
+            if (byConfig && decide(f, mods, FeatureConfig.parse("[features]\n" + f.id() + " = true\n")).state()
+                    == FeatureState.ON && !(dedicatedServer ? f.clientOnly() : f.serverOnly())) {
+                restartable.add(f.id());
+            }
             if (dedicatedServer && f.clientOnly() && status.state() == FeatureState.ON) {
                 status = new FeatureStatus(f.id(), FeatureState.OFF, "client only");
             }
@@ -62,7 +89,7 @@ public final class FeatureRegistry {
             }
             statuses.put(f.id(), status);
         }
-        return new FeatureRegistry(List.copyOf(features), statuses, sink);
+        return new FeatureRegistry(List.copyOf(features), statuses, Set.copyOf(restartable), sink);
     }
 
     private static FeatureStatus decide(Feature f, ModLookup mods, FeatureConfig config) {
@@ -108,9 +135,69 @@ public final class FeatureRegistry {
         return Optional.ofNullable(statuses.get(id));
     }
 
+    /** 今動いているか(起動のときに有効になり、壊れておらず、止めていない)。機能の中身はこれで分ける。 */
     public synchronized boolean isOn(String id) {
+        return isLoaded(id) && !suspended.contains(id);
+    }
+
+    /**
+     * 起動のときに有効になり、壊れていないか(止めているかは見ない)。mixin の当否・初期化と、後から何度も呼ばれる登録
+     * (EMI の plugin・クライアントのコマンドなど。止めている間に呼ばれても、動かし直したら効くように)に使う。
+     */
+    public synchronized boolean isLoaded(String id) {
         FeatureStatus s = statuses.get(id);
         return s != null && s.state() == FeatureState.ON;
+    }
+
+    /** 起動の後に {@link #setActive} で止めているか。 */
+    public synchronized boolean isSuspended(String id) {
+        return suspended.contains(id);
+    }
+
+    /**
+     * 機能を止める・動かし直す(設定の画面から)。効くのは、起動のときに有効になった機能だけ。
+     *
+     * @return その場で効いたら true。起動のときに有効でなかった(mixin が当たっていない)か壊れた機能は false
+     */
+    public boolean setActive(String id, boolean active) {
+        List<Consumer<Boolean>> run;
+        synchronized (this) {
+            if (!isLoaded(id)) {
+                return false;
+            }
+            boolean changed = active ? suspended.remove(id) : suspended.add(id);
+            if (!changed) {
+                return true;
+            }
+            run = List.copyOf(hooks.getOrDefault(id, List.of()));
+        }
+        for (Consumer<Boolean> hook : run) {
+            try {
+                hook.accept(active);
+            } catch (Throwable t) {
+                // 片付けの不具合。止めること自体は壊れたことではないので FAILED にせず、ログに残す
+                LOGGER.warn("gomacraft_utility: {} を{}ときの片付けが失敗した: {}", id,
+                        active ? "動かし直した" : "止めた", describe(t));
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 止めた・動かし直したときに呼ぶものを足す(引数は、動かし直したら true)。止めている間に古くなった作り置きを捨てる・
+     * 途中の操作の待ちを捨てる、などに使う。呼ぶのは {@link #setActive} を呼んだ thread(設定の画面 = 描画の thread)。
+     */
+    public synchronized void onActiveChange(String id, Consumer<Boolean> hook) {
+        hooks.computeIfAbsent(id, k -> new ArrayList<>()).add(hook);
+    }
+
+    /**
+     * 設定で入にして起動し直せば有効になりうるか(起動のときに、切ってあった・設定の値が読めなかった)。要る Mod が無い・
+     * 版が合わない・壊れた機能は、起動し直しても有効にならないので偽。
+     */
+    public synchronized boolean enableableByRestart(String id) {
+        FeatureStatus s = statuses.get(id);
+        return s != null && s.state() == FeatureState.OFF && restartable.contains(id);
     }
 
     public synchronized List<FeatureStatus> statuses() {
@@ -120,7 +207,7 @@ public final class FeatureRegistry {
     /** 有効な機能を初期化する。例外を投げた機能だけが FAILED になり、ほかは続ける。 */
     public void initFeatures(FeatureContext context) {
         for (Feature f : features) {
-            if (!isOn(f.id())) {
+            if (!isLoaded(f.id())) {
                 continue;
             }
             try {
@@ -181,6 +268,23 @@ public final class FeatureRegistry {
         } catch (Throwable t) {
             markFailed(id, describe(t));
             return fallback;
+        }
+    }
+
+    /**
+     * {@link #guard} の、止めていても走らせる形({@link #isLoaded})。後から何度も呼ばれる登録の口(EMI の plugin・
+     * クライアントのコマンド)に使う。登録したものの中身は {@link #guard} で分ける。
+     */
+    public boolean guardLoaded(String id, Runnable body) {
+        if (!isLoaded(id)) {
+            return false;
+        }
+        try {
+            body.run();
+            return true;
+        } catch (Throwable t) {
+            markFailed(id, describe(t));
+            return false;
         }
     }
 
