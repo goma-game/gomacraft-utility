@@ -60,6 +60,10 @@
   "gomacraft_utility.feature.compass_search_history.tooltip": "Shows the search history next to the Nature's / Explorer's Compass search box.",
   "gomacraft_utility.feature.explorerscompass_search": "Explorer's Compass",
   "gomacraft_utility.feature.explorerscompass_search.tooltip": "Explorer's Compass search also matches English and mod names.",
+  "gomacraft_utility.settings.naturescompass_search.filters": "Prefix filters",
+  "gomacraft_utility.settings.naturescompass_search.filters.tooltip": "@source  #tag  ~dimension\nCombine with spaces (e.g. #forest ~overworld).",
+  "gomacraft_utility.settings.explorerscompass_search.filters": "Prefix filters",
+  "gomacraft_utility.settings.explorerscompass_search.filters.tooltip": "@source  %group  ~dimension\nCombine with spaces (e.g. %village ~overworld).",
   "gomacraft_utility.feature.mcjtylib_text": "RFTools text",
   "gomacraft_utility.feature.mcjtylib_text.tooltip": "Translates hard-coded English in RFTools-family and XNet screens.",
   "gomacraft_utility.feature.emi_ae_stock": "Stock counts",
@@ -110,9 +114,5 @@
   "gomacraft_utility.feature.emi_search_history": "EMI",
   "gomacraft_utility.feature.emi_search_history.tooltip": "Shows the search history left of the EMI search box. It is shared with the AE2 terminal.",
   "gomacraft_utility.search_sync.inverted": "Sync with EMI: %s (flipped, blue outline)",
-  "gomacraft_utility.search_sync.normal": "Sync with EMI: %s (as configured)",
-  "gomacraft_utility.settings.naturescompass_search.filters": "Prefix filters",
-  "gomacraft_utility.settings.naturescompass_search.filters.tooltip": "@source  #tag  ~dimension\nCombine with spaces (e.g. #forest ~overworld).",
-  "gomacraft_utility.settings.explorerscompass_search.filters": "Prefix filters",
-  "gomacraft_utility.settings.explorerscompass_search.filters.tooltip": "@source  %group  ~dimension\nCombine with spaces (e.g. %village ~overworld)."
+  "gomacraft_utility.search_sync.normal": "Sync with EMI: %s (as configured)"
 }

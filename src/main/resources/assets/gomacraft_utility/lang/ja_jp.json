@@ -60,6 +60,10 @@
   "gomacraft_utility.feature.compass_search_history.tooltip": "Nature's Compass・Explorer's Compass の検索欄の横に、検索語の履歴を出します。",
   "gomacraft_utility.feature.explorerscompass_search": "Explorer's Compass",
   "gomacraft_utility.feature.explorerscompass_search.tooltip": "Explorer's Compass の検索で、英語名・Mod 名でも当たるようにします。",
+  "gomacraft_utility.settings.naturescompass_search.filters": "印で絞り込む",
+  "gomacraft_utility.settings.naturescompass_search.filters.tooltip": "@ソース  #タグ  ~ディメンション\n空白で区切ると組み合わせられます(例: #forest ~overworld)。",
+  "gomacraft_utility.settings.explorerscompass_search.filters": "印で絞り込む",
+  "gomacraft_utility.settings.explorerscompass_search.filters.tooltip": "@ソース  %グループ  ~ディメンション\n空白で区切ると組み合わせられます(例: %village ~overworld)。",
   "gomacraft_utility.feature.mcjtylib_text": "RFTools 系の訳",
   "gomacraft_utility.feature.mcjtylib_text.tooltip": "RFTools 系・XNet などの画面の、英語のままの文に訳を当てます。",
   "gomacraft_utility.feature.emi_ae_stock": "在庫数",
@@ -110,9 +114,5 @@
   "gomacraft_utility.feature.emi_search_history": "EMI",
   "gomacraft_utility.feature.emi_search_history.tooltip": "EMI の検索欄の左に、検索語の履歴を出します。履歴は AE2 のターミナルと同じです。",
   "gomacraft_utility.search_sync.inverted": "EMI との同期: %s(反転中。青い枠)",
-  "gomacraft_utility.search_sync.normal": "EMI との同期: %s(設定どおり)",
-  "gomacraft_utility.settings.naturescompass_search.filters": "印で絞り込む",
-  "gomacraft_utility.settings.naturescompass_search.filters.tooltip": "@ソース  #タグ  ~ディメンション\n空白で区切ると組み合わせられます(例: #forest ~overworld)。",
-  "gomacraft_utility.settings.explorerscompass_search.filters": "印で絞り込む",
-  "gomacraft_utility.settings.explorerscompass_search.filters.tooltip": "@ソース  %グループ  ~ディメンション\n空白で区切ると組み合わせられます(例: %village ~overworld)。"
+  "gomacraft_utility.search_sync.normal": "EMI との同期: %s(設定どおり)"
 }
