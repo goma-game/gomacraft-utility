@@ -3,6 +3,7 @@ package gomacraft.utility.search;
 import gomacraft.utility.feature.Feature;
 import gomacraft.utility.feature.FeatureContext;
 import gomacraft.utility.feature.Requirement;
+import gomacraft.utility.settings.Settings;
 import java.util.List;
 
 /**
@@ -65,9 +66,15 @@ public final class SearchFeatures {
                         context -> gomacraft.utility.search.client.EmiSearchHistory.init(context)),
                 // コンパスと mcjtylib の版は Maven の形でないので、範囲を書かない(当て先が変われば FAILED で気付く)
                 feature(NATURESCOMPASS_SEARCH, List.of(Requirement.of("naturescompass")),
-                        context -> gomacraft.utility.search.client.EnglishNames.install(context, NATURESCOMPASS_SEARCH)),
+                        context -> {
+                            gomacraft.utility.search.client.EnglishNames.install(context, NATURESCOMPASS_SEARCH);
+                            Settings.client().register(CompassFilterSettings.NATURES);
+                        }),
                 feature(EXPLORERSCOMPASS_SEARCH, List.of(Requirement.of("explorerscompass")),
-                        context -> gomacraft.utility.search.client.EnglishNames.install(context, EXPLORERSCOMPASS_SEARCH)),
+                        context -> {
+                            gomacraft.utility.search.client.EnglishNames.install(context, EXPLORERSCOMPASS_SEARCH);
+                            Settings.client().register(CompassFilterSettings.EXPLORERS);
+                        }),
                 // 要る Mod は書かない(どちらかのコンパスがあれば出す —— 中で、有効なコンパスの検索の機能だけを使う)
                 feature(COMPASS_SEARCH_HISTORY, List.of(),
                         context -> gomacraft.utility.search.client.CompassSearchHistory.init(context)),

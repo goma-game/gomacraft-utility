@@ -7,6 +7,7 @@ import gomacraft.utility.features.ae2_repo_update_batch.Ae2RepoUpdateBatch;
 import gomacraft.utility.features.ttf_glyph_lock.TtfGlyphLock;
 import gomacraft.utility.screenshot.ScreenshotFeatures;
 import gomacraft.utility.screenshot.ShareSettings;
+import gomacraft.utility.search.CompassFilterSettings;
 import gomacraft.utility.search.SearchFeatures;
 import gomacraft.utility.search.SearchHistorySettings;
 import java.util.ArrayList;
@@ -121,8 +122,10 @@ public final class SettingsLayout {
                 new Tab(SEARCH, List.of(
                         group("english_name", List.of(),
                                 feature(SearchFeatures.AE2_ENGLISH_SEARCH),
-                                feature(SearchFeatures.NATURESCOMPASS_SEARCH),
-                                feature(SearchFeatures.EXPLORERSCOMPASS_SEARCH)),
+                                feature(SearchFeatures.NATURESCOMPASS_SEARCH,
+                                        setting(CompassFilterSettings.NATURES)),
+                                feature(SearchFeatures.EXPLORERSCOMPASS_SEARCH,
+                                        setting(CompassFilterSettings.EXPLORERS))),
                         group("history", List.of(),
                                 feature(SearchFeatures.AE2_SEARCH_HISTORY),
                                 feature(SearchFeatures.EMI_SEARCH_HISTORY),

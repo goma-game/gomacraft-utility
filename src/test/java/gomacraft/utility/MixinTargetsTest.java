@@ -91,7 +91,10 @@ class MixinTargetsTest {
                 } else if (a.desc.equals(ACCESSOR)) {
                     String fieldName = (String) value(a, "value");
                     assertNotNull(fieldName, where + ": @Accessor に field の名前を書く(名前からの推測に頼らない)");
-                    Type type = Type.getReturnType(method.desc);
+                    // 読む口は返す型、書く口(戻りが void で引数 1 つ)は引数の型が field の型
+                    Type[] args = Type.getArgumentTypes(method.desc);
+                    Type returned = Type.getReturnType(method.desc);
+                    Type type = returned.getSort() == Type.VOID && args.length == 1 ? args[0] : returned;
                     assertTrue(target.fields.stream().anyMatch(f -> f.name.equals(fieldName) && f.desc.equals(type.getDescriptor())),
                             where + ": @Accessor の field " + fieldName + " が " + target.name + " に無い");
                 } else if (a.desc.equals(INVOKER)) {
