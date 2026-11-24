@@ -4,6 +4,7 @@ import gomacraft.utility.Features;
 import gomacraft.utility.feature.FeatureContext;
 import gomacraft.utility.mixin.explorerscompass_search.ExplorersCompassScreenAccessor;
 import gomacraft.utility.mixin.naturescompass_search.NaturesCompassScreenAccessor;
+import gomacraft.utility.search.HistoryLayout;
 import gomacraft.utility.search.SearchFeatures;
 import java.util.List;
 import net.minecraft.client.gui.components.EditBox;
@@ -22,7 +23,18 @@ public final class CompassSearchHistory {
     /** コンパスの帳の名前(履歴のファイルの中で、プレイヤーの帳と分ける)。 */
     static final String SCOPE = "compass";
 
+    /** 右上のボタン(テレポート。画面の右から 120 の所に幅 110)の手前。どちらのコンパスも同じ。 */
+    private static final int RIGHT_BUTTON_FROM_EDGE = 120;
+
     private CompassSearchHistory() {
+    }
+
+    /**
+     * 欄の右の空きの終わり(4 回目の確かめの 3 —— 欄の下に出すと 1 番目の結果を隠した)。⚠ どちらのコンパスも、右上に
+     * テレポートのボタンを置く(出すのは許された人だけ)。出ていなくても同じ所で止める(ボタンの有無で形を変えない)。
+     */
+    static int compassSideRight(Screen screen) {
+        return screen.width - RIGHT_BUTTON_FROM_EDGE - HistoryLayout.GAP;
     }
 
     public static void init(FeatureContext context) throws Exception {
@@ -40,6 +52,16 @@ public final class CompassSearchHistory {
                 field.setValue(text);
                 ((NaturesCompassScreenAccessor) screen).gomacraftUtility$processSearchTerm();
             }
+
+            @Override
+            public HistoryLayout.Mode mode() {
+                return HistoryLayout.Mode.RIGHT;
+            }
+
+            @Override
+            public int sideRight(Screen screen) {
+                return compassSideRight(screen);
+            }
         };
         SearchHistoryOverlay.Host explorers = new SearchHistoryOverlay.Host() {
             @Override
@@ -53,6 +75,16 @@ public final class CompassSearchHistory {
             public void apply(Screen screen, EditBox field, String text) {
                 field.setValue(text);
                 ((ExplorersCompassScreenAccessor) screen).gomacraftUtility$processSearchTerm();
+            }
+
+            @Override
+            public HistoryLayout.Mode mode() {
+                return HistoryLayout.Mode.RIGHT;
+            }
+
+            @Override
+            public int sideRight(Screen screen) {
+                return compassSideRight(screen);
             }
         };
         new SearchHistoryOverlay(SearchFeatures.COMPASS_SEARCH_HISTORY, SCOPE, List.of(natures, explorers)).register();
