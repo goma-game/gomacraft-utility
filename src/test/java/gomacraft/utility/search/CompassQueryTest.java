@@ -42,6 +42,10 @@ class CompassQueryTest {
         // 受け持つかどうかで当たり方が変わらない(印の語が 1 つだけでも受け持つ)
         assertTrue(CompassQuery.takesOver("@yungsbetterdungeons", NATURES));
         assertFalse(CompassQuery.takesOver("coniferous forest", NATURES), "印の無い語だけはコンパス本来の照合");
+        // 使えない印の語・印だけの語を捨てて名前の語だけが残っても受け持つ(本来の照合に任せると、元の文字列のまま
+        // 照らして 0 件になる)
+        assertTrue(CompassQuery.takesOver("%village forest", NATURES), "使えない印の語を捨てても受け持つ");
+        assertTrue(CompassQuery.takesOver("@ forest", NATURES), "印だけの語を捨てても受け持つ");
         assertFalse(CompassQuery.matches(CompassQuery.parse("@biomesoplenty ~overworld", NATURES), biome::get),
                 "別のディメンションでは当たらない");
     }

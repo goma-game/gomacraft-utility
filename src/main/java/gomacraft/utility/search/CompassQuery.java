@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 /**
  * コンパス(Nature's / Explorer's)の検索語を、印の付いた語に分けて照合する(goma-org/gomabase#2295 の 5 回目の確かめの B。
@@ -77,21 +78,31 @@ public final class CompassQuery {
     }
 
     /**
-     * この Mod が照合を受け持つか。印の語が 1 つでも在れば受け持つ(印の語の当たり方を、組み合わせの有無で変えない)。
+     * この Mod が照合を受け持つか。元の語の頭に印の字が 1 つでも在れば受け持つ(印の語の当たり方を、組み合わせの有無で
+     * 変えない)。⚠ 捨てる前の語で決める: 使えない印の語・印だけの語を捨てて印の無い語だけが残っても、コンパス本来の照合に
+     * 任せると、捨てたはずの語を含む元の文字列のまま照らして 0 件になる({@code %village forest}・{@code @ forest})。
      * 印の無い語だけなら、コンパス本来の照合のまま(英語名は照合に使う名前の差し替えで当たる)。
+     *
+     * @param supported 今は使わない(どの印の字でも受け持つ。呼び手の形を変えないために残す)
      */
     public static boolean takesOver(String raw, Set<Kind> supported) {
-        for (Term t : parse(raw, supported)) {
-            if (t.kind() != Kind.NAME) {
+        if (raw == null) {
+            return false;
+        }
+        for (String word : raw.trim().split("\\s+")) {
+            if (!word.isEmpty() && kindOf(word.charAt(0)) != Kind.NAME) {
                 return true;
             }
         }
         return false;
     }
 
-    /** 空白と記号({@code ' ’ _ - . :})を詰める(Mod の名前・ディメンションの名前を、空白を詰めて打った語と比べる)。 */
+    /** 詰める空白と記号({@code ' ’ _ - . :})。キーを打つたび・項目ごとに使うので、1 つだけ作る。 */
+    private static final Pattern COMPACT = Pattern.compile("[\\s'\u2019_\\-.:]");
+
+    /** 空白と記号を詰める(Mod の名前・ディメンションの名前を、空白を詰めて打った語と比べる)。 */
     static String compact(String text) {
-        return text.replaceAll("[\\s'\u2019_\\-.:]", "");
+        return COMPACT.matcher(text).replaceAll("");
     }
 
     /**
