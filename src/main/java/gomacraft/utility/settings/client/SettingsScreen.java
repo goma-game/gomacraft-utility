@@ -209,6 +209,19 @@ public final class SettingsScreen extends Screen {
         return !query.isBlank();
     }
 
+    /**
+     * 最初の focus は検索欄へ。⚠ 既定(最初の部品)だとタブの帯のボタンに focus が当たり、帯はそのタブを選び直す。
+     * 窓の大きさを変えると(作り直しのたびに呼ばれる)、選んでいたタブが最初のタブへ戻り、検索の語も消えていた。
+     */
+    @Override
+    protected void setInitialFocus() {
+        if (search != null) {
+            setInitialFocus(search);
+        } else {
+            super.setInitialFocus();
+        }
+    }
+
     /** 「既定に戻す」: いま並んでいる項目だけ(触れない機能は除く —— 並べるときに {@link #shown} へ集める)。 */
     private void resetVisible() {
         for (SettingsLayout.Node node : shown) {
@@ -267,10 +280,12 @@ public final class SettingsScreen extends Screen {
             switch (node) {
                 case SettingsLayout.FeatureNode f -> {
                     String id = f.featureId();
-                    if (usable(id)) {
+                    // 壊れた機能も切れる(ファイルへ書く。その場では何もしない —— もう止まっている)。子は触れない
+                    boolean toggleable = usable(id) || failed(id);
+                    if (toggleable) {
                         shown.add(node);
                     }
-                    rows.add(new ControlRow(node, depth, parent, featureButton(id), usable(id), failed(id)));
+                    rows.add(new ControlRow(node, depth, parent, featureButton(id), toggleable, failed(id)));
                     childEnabled = () -> parent.getAsBoolean() && usable(id) && Boolean.TRUE.equals(features.get(id));
                 }
                 case SettingsLayout.SettingNode s -> {
@@ -419,10 +434,25 @@ public final class SettingsScreen extends Screen {
 
     @Override
     public void onClose() {
-        commit();
+        commit(true);
+    }
+
+    /**
+     * 「完了」・Esc 以外で閉じられた(切断された・蹴られたなど、ほかの画面に替えられた): 変更は捨てずに書く。
+     * 知らせの画面は出さない(ほかの画面に替わったところへ割り込まない)。自分で閉じたときは書き終えている。
+     */
+    @Override
+    public void removed() {
+        super.removed();
+        commit(false);
     }
 
     private void commit() {
+        commit(true);
+    }
+
+    /** @param navigate 書いた後に、親の画面(か知らせの画面)へ移るか */
+    private void commit(boolean navigate) {
         if (committed) {
             return;
         }
@@ -459,14 +489,16 @@ public final class SettingsScreen extends Screen {
                 LOGGER.warn("gomacraft_utility: 手元の設定を書けない: {}", e.toString());
             }
         }
-        List<String> restart = new ArrayList<>();
-        if (!featureChanges.isEmpty()) {
-            features.forEach((id, on) -> {
-                if (on && !registry.isLoaded(id) && registry.enableableByRestart(id)) {
-                    restart.add("・" + paths.getOrDefault(id, I18n.get("gomacraft_utility.feature." + id)));
-                }
-            });
+        if (!navigate) {
+            return;
         }
+        // 起動し直しが要るもの: 今回入にした機能のうち、起動のときに切ってあったもの
+        List<String> restart = new ArrayList<>();
+        featureChanges.forEach((id, on) -> {
+            if (on && !registry.isLoaded(id) && registry.enableableByRestart(id)) {
+                restart.add("・" + paths.getOrDefault(id, I18n.get("gomacraft_utility.feature." + id)));
+            }
+        });
         if (restart.isEmpty()) {
             this.minecraft.setScreen(parent);
             return;

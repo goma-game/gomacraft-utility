@@ -27,6 +27,13 @@ class TextWrapTest {
     }
 
     @Test
+    void consecutivePunctuationStaysOnThePreviousLine() {
+        // 幅 36 = 全角 4 字。「あいうえ」の後に「。」」が続く
+        List<String> lines = TextWrap.wrap("あいうえ。」かき", TextWrapTest::width, 36);
+        assertEquals(List.of("あいうえ。」", "かき"), lines);
+    }
+
+    @Test
     void keepsAsciiWordsAndHonoursNewlines() {
         List<String> lines = TextWrap.wrap("Explorer's Compass の検索\n次の行", TextWrapTest::width, 60);
         assertTrue(lines.contains("次の行"), lines.toString());

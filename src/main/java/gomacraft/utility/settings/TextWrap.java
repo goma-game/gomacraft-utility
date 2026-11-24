@@ -70,11 +70,10 @@ public final class TextWrap {
                 continue;
             }
             if (lineWidth > 0 && NO_LINE_START.indexOf(c) >= 0 && unit.length() == Character.charCount(c)) {
-                // 句読点は前の行に寄せる(少し越える)
+                // 句読点は前の行に寄せる(少し越える)。続く句読点(「。」」など)も同じ行へ寄せるので、ここでは折らない
+                // (次の句読点でない字が、越えた幅を見て折る)
                 line.append(unit);
-                lines.add(strip(line));
-                line.setLength(0);
-                lineWidth = 0;
+                lineWidth += unitWidth;
                 continue;
             }
             if (lineWidth > 0) {

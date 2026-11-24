@@ -195,8 +195,9 @@ class FeatureRegistryTest {
     void suspendingKeepsTheStatusLineAndNeverMarksFailed() {
         List<String> lines = new ArrayList<>();
         FeatureRegistry registry = FeatureRegistry.evaluate(
-                List.of(feature("live", true), feature("cut", true), feature("broken", true)), mods(Map.of()),
-                FeatureConfig.parse("[features]\ncut = false\n"), lines::add);
+                List.of(feature("live", true), feature("cut", true), feature("broken", true),
+                        feature("cut_missing", true, Requirement.of("nothere"))), mods(Map.of()),
+                FeatureConfig.parse("[features]\ncut = false\ncut_missing = false\n"), lines::add);
         registry.emit();
         String bootLine = registry.line();
         List<Boolean> hook = new ArrayList<>();
@@ -218,6 +219,7 @@ class FeatureRegistryTest {
         assertFalse(registry.setActive("cut", true), "起動のときに切ってあった機能は起動し直すまで動かない");
         assertFalse(registry.isOn("cut"));
         assertTrue(registry.enableableByRestart("cut"));
+        assertFalse(registry.enableableByRestart("cut_missing"), "要る Mod が無ければ、起動し直しても有効にならない");
 
         registry.markFailed("broken", "boom");
         assertFalse(registry.setActive("broken", true), "動かし直しても FAILED は消えない");

@@ -90,6 +90,7 @@
   "gomacraft_utility.screenshot.choose.both": "Both",
   "gomacraft_utility.screenshot.choose.cancel": "Cancel",
   "gomacraft_utility.screenshot.expired": "This screenshot can no longer be posted.",
+  "gomacraft_utility.screenshot.stopped": "Posting screenshots is turned off in the settings.",
   "gomacraft_utility.screenshot.busy": "Another screenshot is still being sent. Try again shortly.",
   "gomacraft_utility.screenshot.unavailable": "This server does not accept screenshots.",
   "gomacraft_utility.screenshot.unreadable": "Could not read the screenshot, or it is too large to send.",

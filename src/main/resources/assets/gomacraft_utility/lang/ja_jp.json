@@ -90,6 +90,7 @@
   "gomacraft_utility.screenshot.choose.both": "両方",
   "gomacraft_utility.screenshot.choose.cancel": "やめる",
   "gomacraft_utility.screenshot.expired": "このスクショはもう投稿できません。",
+  "gomacraft_utility.screenshot.stopped": "スクショの投稿は、設定で切ってあります。",
   "gomacraft_utility.screenshot.busy": "別のスクショを送っています。少し待ってからもう一度押してください。",
   "gomacraft_utility.screenshot.unavailable": "このサーバはスクショを受け付けていません。",
   "gomacraft_utility.screenshot.unreadable": "スクショを読めないか、大きすぎて送れません。",

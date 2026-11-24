@@ -41,11 +41,15 @@ public final class FeatureRegistry {
     private final Set<String> suspended = new HashSet<>();
     /** 止めた・動かし直したときに呼ぶもの(機能 → 呼ぶもの)。 */
     private final Map<String, List<Consumer<Boolean>>> hooks = new LinkedHashMap<>();
+    /** 設定で入にして起動し直せば有効になる機能({@link #enableableByRestart})。 */
+    private final Set<String> restartable;
     private boolean emitted;
 
-    private FeatureRegistry(List<Feature> features, Map<String, FeatureStatus> statuses, Consumer<String> sink) {
+    private FeatureRegistry(List<Feature> features, Map<String, FeatureStatus> statuses, Set<String> restartable,
+            Consumer<String> sink) {
         this.features = features;
         this.statuses = statuses;
+        this.restartable = restartable;
         this.sink = sink;
     }
 
@@ -64,11 +68,19 @@ public final class FeatureRegistry {
             boolean dedicatedServer) {
         Set<String> seen = new HashSet<>();
         Map<String, FeatureStatus> statuses = new LinkedHashMap<>();
+        Set<String> restartable = new HashSet<>();
         for (Feature f : features) {
             if (!ID.matcher(f.id()).matches() || !seen.add(f.id())) {
                 throw new IllegalArgumentException("機能の名前が不正か重なっている: " + f.id());
             }
             FeatureStatus status = decide(f, mods, config);
+            // 設定で切ってあった(値が読めなかった)機能が、入にして起動し直せば有効になるか(要る Mod と版、効く側も見る)
+            boolean byConfig = status.state() == FeatureState.OFF && status.reason() != null
+                    && (status.reason().equals("disabled") || status.reason().startsWith("config "));
+            if (byConfig && decide(f, mods, FeatureConfig.parse("[features]\n" + f.id() + " = true\n")).state()
+                    == FeatureState.ON && !(dedicatedServer ? f.clientOnly() : f.serverOnly())) {
+                restartable.add(f.id());
+            }
             if (dedicatedServer && f.clientOnly() && status.state() == FeatureState.ON) {
                 status = new FeatureStatus(f.id(), FeatureState.OFF, "client only");
             }
@@ -77,7 +89,7 @@ public final class FeatureRegistry {
             }
             statuses.put(f.id(), status);
         }
-        return new FeatureRegistry(List.copyOf(features), statuses, sink);
+        return new FeatureRegistry(List.copyOf(features), statuses, Set.copyOf(restartable), sink);
     }
 
     private static FeatureStatus decide(Feature f, ModLookup mods, FeatureConfig config) {
@@ -185,10 +197,7 @@ public final class FeatureRegistry {
      */
     public synchronized boolean enableableByRestart(String id) {
         FeatureStatus s = statuses.get(id);
-        if (s == null || s.state() != FeatureState.OFF || s.reason() == null) {
-            return false;
-        }
-        return s.reason().equals("disabled") || s.reason().startsWith("config ");
+        return s != null && s.state() == FeatureState.OFF && restartable.contains(id);
     }
 
     public synchronized List<FeatureStatus> statuses() {
