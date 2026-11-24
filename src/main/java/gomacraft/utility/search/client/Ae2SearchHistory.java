@@ -23,8 +23,11 @@ import net.neoforged.neoforge.common.NeoForge;
  * <ul>
  *   <li>出す件数(空のとき・広げたとき)と持つ件数は設定の画面({@code ClientSettings}。既定は 3・10・100)で変えられ、
  *       すぐ効く(持つ件数は次に記すときから)。コンパスの履歴も同じ値を使う。</li>
- *   <li>記すのは、ウィンドウの決まり(Enter・欄の外・閉じたとき)に加えて、F キーで送ったときと、EMI の検索欄から focus が
- *       外れたとき(AE2 と EMI の履歴を 1 つにする)。</li>
+ *   <li>記すのは、ウィンドウの決まり(focus が外れたとき・Enter・欄の外を押したとき・閉じたとき —— {@code FocusRecorder})
+ *       に加えて、F キーで送ったとき。</li>
+ *   <li>EMI の検索欄の語も同じ帳に記す(AE2 と EMI の履歴を 1 つにする)。記すのは EMI の欄の履歴の機能
+ *       ({@code emi_search_history})のウィンドウの決まり。その機能が切れているときだけ、ここが EMI の欄から focus が
+ *       外れたのを見て記す({@link #watchEmi})。</li>
  *   <li>帳はプレイヤーの帳そのまま(前からの履歴を引き継ぐ)。</li>
  * </ul>
  */
@@ -90,9 +93,10 @@ public final class Ae2SearchHistory {
         return ((MEStorageScreenHistoryAccessor) screen).gomacraftUtility$historySearchField();
     }
 
-    /** EMI の検索欄から focus が外れたら、その語を記す(どの画面でも)。 */
+    /** EMI の欄の履歴の機能が切れているとき、EMI の検索欄から focus が外れたら、その語を記す(どの画面でも)。 */
     private static void watchEmi() {
-        // EMI の検索欄の履歴の機能が有効なら、そちらが記す(同じ帳へ 2 度記さない)
+        // EMI の検索欄の履歴の機能が有効なら、そちらのウィンドウが focus の見張りで記すので、ここは何もしない
+        // (同じ帳へ 2 度記さない)。切れているときだけ、ここが EMI の欄の語を記す
         if (Features.registry().isOn(SearchFeatures.EMI_SEARCH_HISTORY)) {
             emiFocused = false;
             return;

@@ -24,6 +24,12 @@ class FocusRecorderTest {
             assertEquals("iron", r.observe(true, false, "iron"), who + "focus が外れたら記す");
             assertNull(r.observe(true, false, "iron"), who + "外れたままなら 2 度は記さない");
 
+            // 直に記した(Enter・履歴の語を使った)後は、focus が外れても 2 度は記さない
+            r = new FocusRecorder();
+            r.observe(true, true, "lead");
+            r.recorded();
+            assertNull(r.observe(true, false, "lead"), who + "直に記した語を 2 度記さない");
+
             // focus があるまま閉じた
             r = new FocusRecorder();
             r.observe(true, true, "gold");

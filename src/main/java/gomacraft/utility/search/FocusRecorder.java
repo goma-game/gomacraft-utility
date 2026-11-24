@@ -6,7 +6,9 @@ package gomacraft.utility.search;
  *
  * <p>契機は 2 つだけ。どちらも、押した・打った出来事ではなく<b>欄の様子</b>で決める。
  * <ul>
- *   <li><b>focus が外れたとき</b>(描くたび・tick ごとに {@link #observe} で見る): Enter・欄の外を押す・Tab・Esc で
+ *   <li>呼ぶ側が直に記す道(Enter・履歴の語を使う・欄の外を押す)もあり、記したら {@link #recorded} を呼ぶ。⚠ 欄の外を
+ *       押しても focus を外さない画面がある(Nature's Compass)ので、押した道は残す。</li>
+ *   <li><b>focus が外れたとき</b>(tick ごとに {@link #observe} で見る): Enter・欄の外を押す・Tab・Esc で
  *       外れるのを、どの道で外れたかに依らずに拾う。⚠ 前は「欄の外を押した」を押した出来事で見ていて、履歴のウィンドウが
  *       出ていないとき(打った語に合う履歴が無いとき —— 新しい語はいつもそう)は記さなかった。EMI は押すのを画面の
  *       出来事より先に自分で受けるので、出来事の順にも依りうる。</li>
@@ -32,6 +34,14 @@ public final class FocusRecorder {
         boolean was = focused;
         focused = focusedNow;
         return was && !focusedNow ? value : null;
+    }
+
+    /**
+     * 呼ぶ側が直に記した(Enter・履歴の語を使った・欄の外を押した)。次の {@link #observe} で focus が外れたのを見ても、
+     * 同じ語を 2 度記さない(ファイルを 2 度書くと、書けないときに失敗を 2 回数えて FAILED に早く届く)。
+     */
+    public void recorded() {
+        focused = false;
     }
 
     /**

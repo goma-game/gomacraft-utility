@@ -490,6 +490,7 @@ public final class SearchHistoryOverlay {
             } else {
                 // 画面が Enter で欄の focus を外す。その前に記す
                 record(field.getValue());
+                recorder.recorded();
             }
             selected = -1;
             scroll = 0;
@@ -529,7 +530,10 @@ public final class SearchHistoryOverlay {
         }
         if (index < 0) {
             if (!field.isMouseOver(mouseX, mouseY)) {
-                // 欄の外を押した(focus が外れる。語は focus が外れたのを見て記す —— watchFocus)
+                // 欄の外を押した。今の語を記す(⚠ Nature's Compass は欄の外を押しても focus を外さないので、
+                // focus の見張り(watchFocus)では拾えない。ウィンドウが出ていないときは見張りが拾う)
+                record(field.getValue());
+                recorder.recorded();
                 selected = -1;
                 scroll = 0;
             }
@@ -561,6 +565,7 @@ public final class SearchHistoryOverlay {
             host.apply(screen, field, text);
         }
         record(text);
+        recorder.recorded();
         field.setFocused(false);
         if (screen.getFocused() == field) {
             screen.setFocused(null);
