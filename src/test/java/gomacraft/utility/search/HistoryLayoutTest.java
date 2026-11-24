@@ -117,10 +117,25 @@ class HistoryLayoutTest {
                     Placement wide = place(Mode.RIGHT, c, true);
                     checkReachable(c.name() + " compact", c, compact.box(), problems);
                     checkReachable(c.name() + " wide", c, wide.box(), problems);
-                    // 小さい形は結果の一覧(y 40 から)を隠さない(欄そのものが画面の右からはみ出す、壊れた大きさは除く)
+                    // 小さい形は、結果の一覧(y 40 から)の 1 番目の名前の出る左の方(欄の右の端より左)を隠さない
+                    // (欄そのものが画面の右からはみ出す、壊れた大きさは除く)
                     boolean fits = field.right() + HistoryLayout.GAP + 40 <= w - 2;
-                    if (fits && compact.box().bottom() > 40) {
-                        problems.add(c.name() + ": 小さい形が結果の一覧を隠す " + compact.box());
+                    // (一覧の左の端 x 130 が欄の右の端の近くまで来る、ごく狭い画面は名前の所が無いので見ない)
+                    int nameWidth = field.right() - 40 - 130;
+                    Rect firstName = new Rect(130, 40, Math.max(1, nameWidth), 20);
+                    if (fits && nameWidth > 0 && compact.box().intersects(firstName)) {
+                        problems.add(c.name() + ": 小さい形が 1 番目の結果の名前を隠す " + compact.box());
+                    }
+                    // 右上のテレポートのボタン(画面の右から 120・幅 110・y 10〜30)に重ねない(欄に focus があるあいだ
+                    // ボタンが効かなくなる)。幅は MAX_WIDTH まで
+                    Rect teleport = new Rect(w - 120, 10, 110, 20);
+                    for (Placement p : List.of(compact, wide)) {
+                        if (p.box().intersects(teleport)) {
+                            problems.add(c.name() + ": テレポートのボタンに重なる " + p.box());
+                        }
+                        if (p.box().width() > HistoryLayout.MAX_WIDTH) {
+                            problems.add(c.name() + ": 幅が上限を越える " + p.box());
+                        }
                     }
                     if (!wide.box().contains(compact.box())) {
                         problems.add(c.name() + ": 広げた形が小さい形を含まない " + wide.box() + " / " + compact.box());

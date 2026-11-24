@@ -32,7 +32,7 @@ import org.lwjgl.glfw.GLFW;
  *
  * <ul>
  *   <li>検索欄に focus があるあいだ出す。置き方は欄ごとに {@link HistoryLayout}(AE2 の端末は欄の左の見出しの所、
- *       EMI は欄の左、コンパスは欄の上)。カーソルを合わせると広げる。入力中は入力に合う語だけを出し、合うものが無ければ
+ *       EMI は欄の左、コンパスは欄の右の空き —— 狭ければボタンの行の下)。小さい形で出し、カーソルを合わせると広げる。入力中は入力に合う語だけを出し、合うものが無ければ
  *       出さない。</li>
  *   <li>出しているあいだは、ウィンドウと欄の上のツールチップ(AE2 の「名前で検索」、ウィンドウの下のアイテムのもの)を
  *       出さない({@link RenderTooltipEvent.Pre} を止める)。描く順(z)で上に出すのではなく止めるのは、ツールチップが
@@ -438,6 +438,7 @@ public final class SearchHistoryOverlay {
         }
         // 横に流すのは 1 行だけ: カーソルを合わせた行、無ければ ↑↓ で選んだ行
         int flowing = hovered >= 0 ? hovered : selected;
+        boolean flowed = false;
         for (int i = 0; i < box.rows().size(); i++) {
             SearchHistoryStore.Entry entry = box.rows().get(i);
             int index = box.first() + i;
@@ -456,6 +457,7 @@ public final class SearchHistoryOverlay {
                     marqueeText = text;
                     marqueeStart = Util.getMillis();
                 }
+                flowed = true;
                 int offset = HistoryLayout.marqueeOffset(Util.getMillis() - marqueeStart, overflow);
                 g.enableScissor(r.x() + PAD, y, r.right() - PAD, y + ROW);
                 g.drawString(font, text, r.x() + PAD - offset, y + 2, color, false);
@@ -463,6 +465,10 @@ public final class SearchHistoryOverlay {
             } else {
                 g.drawString(font, ellipsize(font, text, avail), r.x() + PAD, y + 2, color, false);
             }
+        }
+        if (!flowed) {
+            // どの行も流れないコマでは、流し始めを戻す(同じ行へ戻ったときも頭から流す)
+            marqueeText = null;
         }
         g.pose().popPose();
     }
@@ -615,6 +621,7 @@ public final class SearchHistoryOverlay {
         selected = -1;
         scroll = 0;
         expanded = false;
+        marqueeText = null;
         shown = null;
         shownScreen = null;
         shownField = null;

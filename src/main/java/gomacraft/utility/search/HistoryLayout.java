@@ -140,24 +140,34 @@ public final class HistoryLayout {
 
     /**
      * 欄の右の空き(コンパス。4 回目の確かめの 3 —— 欄の下に出すと 1 番目の結果を隠した)。小さい形は空きに収まる 1 行、
-     * 広げたら同じ左端・上端のまま右と下へ(結果の一覧に重なってよい)。空きが狭ければ前の置き方。
+     * 広げたら同じ左端・上端のまま右と下へ(結果の一覧に重なってよい)。幅は {@link #MAX_WIDTH} まで。
+     *
+     * <p>⚠ 右の空き(右上のテレポートのボタンの手前)が狭い画面(GUI が大きい)では、ボタンに重ねない(重ねると、欄に
+     * focus があるあいだボタンが効かない)。ボタンの行の下(欄の下の端の下)に、欄の右の端の真下から右へ 1 行で出す。結果の一覧の
+     * 1 番目の右の方に少し掛かるが、欄の下に出す前の形のように 1 番目を全部は隠さない。それでも狭ければ前の置き方。
      */
     private static Placement right(Input in) {
         Rect field = in.field();
         int left = field.right() + GAP;
         int screenRight = in.screenWidth() - 2;
-        int compactWidth = Math.min(in.sideRight(), screenRight) - left;
+        int top = Math.max(0, field.y() + (field.height() - ROW - PAD * 2) / 2);
+        int compactWidth = Math.min(MAX_WIDTH, Math.min(in.sideRight(), screenRight) - left);
+        int wideRight = Math.min(in.sideRight(), screenRight);
         if (compactWidth < MIN_TITLE_WIDTH) {
-            // 右の空き(右上のボタンの手前)が狭い画面(GUI が大きい)は、ボタンに重ねてでも画面の右の端まで使う(欄に
-            // focus があるあいだだけ。欄の下に出すと 1 番目の結果を隠す)。それでも狭ければ前の置き方
-            compactWidth = screenRight - left;
+            // ボタンの行の下へ。欄の右の端の真下から右へ(欄から下へ動かせば入る。結果の名前の出る左の方は隠さない)
+            left = Math.max(0, field.right() - MIN_TITLE_WIDTH);
+            top = field.bottom() + GAP;
+            compactWidth = Math.min(MAX_WIDTH, screenRight - left);
+            wideRight = screenRight;
             if (compactWidth < MIN_TITLE_WIDTH) {
                 return around(in);
             }
         }
         int width = in.wide() ? Math.max(compactWidth, Math.min(MAX_WIDTH, screenRight - left)) : compactWidth;
-        // 1 行の枠(高さ 15)を欄の高さの中ほどに
-        int top = Math.max(0, field.y() + (field.height() - ROW - PAD * 2) / 2);
+        if (top < field.bottom()) {
+            // 欄の行に出すときは、広げてもボタンの手前まで(ボタンに重ねない)
+            width = Math.max(compactWidth, Math.min(width, wideRight - left));
+        }
         int hint = in.wide() ? hintHeight(in) : 0;
         int count = in.wide() ? in.wanted() : 1;
         int room = (in.screenHeight() - top - PAD * 2 - hint) / ROW;

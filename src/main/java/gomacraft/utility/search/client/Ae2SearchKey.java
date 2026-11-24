@@ -2,6 +2,7 @@ package gomacraft.utility.search.client;
 
 import appeng.client.gui.me.common.MEStorageScreen;
 import appeng.client.gui.me.common.RepoSlot;
+import appeng.client.gui.widgets.AETextField;
 import com.mojang.blaze3d.platform.InputConstants;
 import gomacraft.utility.Features;
 import gomacraft.utility.feature.FeatureContext;
@@ -11,6 +12,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.Rect2i;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
@@ -86,7 +88,7 @@ public final class Ae2SearchKey {
         if ((!fill && !copy) || typing(screen)) {
             return;
         }
-        EditBox field = ((MEStorageScreenKeyAccessor) screen).gomacraftUtility$keySearchField();
+        AETextField field = ((MEStorageScreenKeyAccessor) screen).gomacraftUtility$keySearchField();
         if (fill && emi()) {
             // F を EMI の検索欄の上で押したら、EMI の検索語を AE2 の検索欄へ写す(ユーザの指定 —— #2295)
             double[] mouse = mouse();
@@ -95,11 +97,17 @@ public final class Ae2SearchKey {
                 copy = true;
             }
         }
-        if (fill && emi() && field != null && field.isVisible()) {
+        boolean alt = (event.getModifiers() & GLFW.GLFW_MOD_ALT) != 0;
+        if (fill && !alt && emi() && field != null && field.isVisible()) {
             // F を AE2 の検索欄の上で押したら(打っていないとき)、欄の語を EMI の検索欄へ入れる(EMI の検索欄の上の F の
-            // 逆 —— 4 回目の確かめの 2)。欄が空なら何もしない(キーも止めない)
+            // 逆 —— 4 回目の確かめの 2)。欄が空・EMI の検索欄が出ていない・Alt + F のときは何もしない(キーも止めない)。
+            // 欄の上かは、欄の見た目の枠(AE2 のツールチップの枠と同じ)で見る
             double[] mouse = mouse();
-            if (field.isMouseOver(mouse[0], mouse[1])) {
+            Rect2i area = field.getTooltipArea();
+            if (area.contains((int) mouse[0], (int) mouse[1])) {
+                if (EmiBridge.searchField() == null) {
+                    return;
+                }
                 String value = field.getValue();
                 if (value == null || value.isBlank()) {
                     return;
