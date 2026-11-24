@@ -12,7 +12,8 @@ import net.minecraft.client.gui.screens.Screen;
 
 /**
  * コンパス(Nature's / Explorer's)の検索語の履歴(goma-org/gomabase#2295 の mcdev の確かめの 8)。ウィンドウの形と操作は
- * {@link SearchHistoryOverlay}(AE2 の端末と共通)。帳はコンパス用に別に持つ(アイテムの語とバイオーム・構造物の語を混ぜない)。
+ * {@link SearchHistoryOverlay}(AE2 の端末と共通)。帳はコンパスごとに別に持つ(アイテムの語・バイオームの語・構造物の語を
+ * 混ぜない —— 5 回目の確かめで、2 つのコンパスの帳も分けた)。
  *
  * <p>欄はそれぞれのコンパスの検索の機能({@code naturescompass_search}・{@code explorerscompass_search})の accessor で
  * 引く。⚠ その機能の accessor が当たっているか({@code isLoaded} —— 起動のときに有効で、壊れていない)は描くたび・押すたびに
@@ -21,8 +22,11 @@ import net.minecraft.client.gui.screens.Screen;
  * 出す件数・持つ件数は AE2 の端末の履歴と同じ設定({@code SearchHistorySettings})。
  */
 public final class CompassSearchHistory {
-    /** コンパスの帳の名前(履歴のファイルの中で、プレイヤーの帳と分ける)。 */
-    static final String SCOPE = "compass";
+    /** 前の、2 つのコンパスで 1 つだった帳の名前(起動のときに 2 つへ分ける)。 */
+    static final String OLD_SCOPE = "compass";
+    /** コンパスごとの帳の名前(5 回目の確かめ —— バイオームの語と構造物の語を混ぜない)。 */
+    static final String NATURES_SCOPE = "naturescompass";
+    static final String EXPLORERS_SCOPE = "explorerscompass";
 
     /** 右上のボタン(テレポート。画面の右から 120 の所に幅 110)の手前。どちらのコンパスも同じ。 */
     private static final int RIGHT_BUTTON_FROM_EDGE = 120;
@@ -40,6 +44,8 @@ public final class CompassSearchHistory {
 
     public static void init(FeatureContext context) throws Exception {
         SearchHistoryOverlay.loadStore();
+        // 前の 1 つの帳は、両方の帳へ写して分ける(今の記録を失わない。分けた後は写さない)
+        SearchHistoryOverlay.splitScope(OLD_SCOPE, List.of(NATURES_SCOPE, EXPLORERS_SCOPE));
         SearchHistoryOverlay.Host natures = new SearchHistoryOverlay.Host() {
             @Override
             public EditBox field(Screen screen) {
@@ -90,6 +96,8 @@ public final class CompassSearchHistory {
                 return compassSideRight(screen);
             }
         };
-        new SearchHistoryOverlay(SearchFeatures.COMPASS_SEARCH_HISTORY, SCOPE, List.of(natures, explorers)).register();
+        // コンパスごとに別のウィンドウと帳(同じ機能 compass_search_history の中)
+        new SearchHistoryOverlay(SearchFeatures.COMPASS_SEARCH_HISTORY, NATURES_SCOPE, List.of(natures)).register();
+        new SearchHistoryOverlay(SearchFeatures.COMPASS_SEARCH_HISTORY, EXPLORERS_SCOPE, List.of(explorers)).register();
     }
 }

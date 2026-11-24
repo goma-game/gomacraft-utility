@@ -19,7 +19,7 @@ import org.lwjgl.glfw.GLFW;
 /**
  * AE2 の端末の検索欄をダブルクリックすると、AE2 の「EMI の検索と同期する」設定を、その場だけ反転する
  * (同期なら非同期、非同期なら同期)。もう一度ダブルクリックするまで、端末を閉じても保つ(ゲームを閉じれば戻る。
- * AE2 の設定のファイルは変えない)。反転したら、検索欄の下に今の同期の状態を少しの間だけ出す。
+ * AE2 の設定のファイルは変えない)。反転して EMI との同期が入になったときだけ、検索欄の下に「EMI と同期」と少しの間だけ出す(切になったときは出さない)。
  *
  * <p>反転しているあいだは、検索欄を青で縁取る(goma-org/gomabase#2295 の 2 回目の確かめの 3)。縁取るのは反転している
  * ときだけで、AE2 の設定のとおりのときは縁取らない(いつもの見た目のまま)。色は 1 つにする(色で同期の入り切りを分けると、
@@ -69,10 +69,9 @@ public final class Ae2SearchSyncToggle {
             inverted = !inverted;
             // 端末が今使う値(設定の値を、反転の印で読み替えたもの)
             boolean synced = AEConfig.instance().isSyncWithExternalSearch() != inverted;
-            // 反転したのか、AE2 の設定どおりへ戻したのかと、今の同期の入り切りを言う
-            notice = Component.translatable(
-                    inverted ? "gomacraft_utility.search_sync.inverted" : "gomacraft_utility.search_sync.normal",
-                    Component.translatable(synced ? "options.on" : "options.off"));
+            // 同期が入になったときだけ「EMI と同期」と知らせる。切になったときは何も出さない(反転か設定どおりかは
+            // 問わない —— 5 回目の確かめのユーザの指定)
+            notice = synced ? Component.translatable("gomacraft_utility.search_sync.on") : null;
             noticeUntil = now + NOTICE_MS;
             return;
         }
