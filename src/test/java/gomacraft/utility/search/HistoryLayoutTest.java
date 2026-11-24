@@ -47,8 +47,9 @@ class HistoryLayoutTest {
     }
 
     private static Placement place(Mode mode, Case c, boolean wide) {
+        // コンパスの右の空きの終わりは、右上のボタン(画面の右から 120)の手前
         return HistoryLayout.place(new Input(mode, c.screenW(), c.screenH(), c.field(), c.guiLeft(),
-                mode == Mode.TERMINAL, wide ? 10 : 3, wide ? 200 : 80, wide ? 3 : 0, wide));
+                c.screenW() - 122, mode == Mode.TERMINAL, wide ? 10 : 3, wide ? 3 : 0, wide));
     }
 
     /** 画面の中・欄と重ならない・欄の隣(欄から横へ動かせば入る)。 */
@@ -66,7 +67,9 @@ class HistoryLayoutTest {
         boolean vertical = box.x() < field.right() && box.right() > field.x()
                 && ((box.bottom() <= field.y() && box.bottom() >= field.y() - 3)
                         || (box.y() >= field.bottom() && box.y() <= field.bottom() + 3));
-        if (!left && !vertical) {
+        boolean right = box.x() <= field.right() + 3 && box.x() >= field.right()
+                && box.y() < field.bottom() && box.bottom() > field.y();
+        if (!left && !right && !vertical) {
             problems.add(where + ": 欄の隣でない " + box + " field=" + field);
         }
     }
@@ -94,6 +97,35 @@ class HistoryLayoutTest {
             }
             if (wide.rows() < 3) {
                 problems.add(c.name() + ": 広げても行が少ない " + wide.rows());
+            }
+        }
+        assertTrue(problems.isEmpty(), String.join("\n", problems.subList(0, Math.min(20, problems.size()))));
+    }
+
+    @Test
+    void compassWindowIsBesideTheSearchBoxAtEverySize() {
+        List<String> problems = new ArrayList<>();
+        for (int[] m : MONITORS) {
+            for (int scale = 1; scale <= 6; scale++) {
+                int w = (int) Math.ceil(m[0] / (double) scale);
+                int h = (int) Math.ceil(m[1] / (double) scale);
+                // Nature's Compass(欄 x 130)と Explorer's Compass(欄 x 幅/2 - 82)。どちらも y 10・幅 140・高さ 20、
+                // 結果の一覧は y 40 から
+                for (Rect field : List.of(new Rect(130, 10, 140, 20), new Rect(w / 2 - 82, 10, 140, 20))) {
+                    Case c = new Case(m[0] + "x" + m[1] + "@" + scale + " x=" + field.x(), w, h, field, 0, 0);
+                    Placement compact = place(Mode.RIGHT, c, false);
+                    Placement wide = place(Mode.RIGHT, c, true);
+                    checkReachable(c.name() + " compact", c, compact.box(), problems);
+                    checkReachable(c.name() + " wide", c, wide.box(), problems);
+                    // 小さい形は結果の一覧(y 40 から)を隠さない(欄そのものが画面の右からはみ出す、壊れた大きさは除く)
+                    boolean fits = field.right() + HistoryLayout.GAP + 40 <= w - 2;
+                    if (fits && compact.box().bottom() > 40) {
+                        problems.add(c.name() + ": 小さい形が結果の一覧を隠す " + compact.box());
+                    }
+                    if (!wide.box().contains(compact.box())) {
+                        problems.add(c.name() + ": 広げた形が小さい形を含まない " + wide.box() + " / " + compact.box());
+                    }
+                }
             }
         }
         assertTrue(problems.isEmpty(), String.join("\n", problems.subList(0, Math.min(20, problems.size()))));

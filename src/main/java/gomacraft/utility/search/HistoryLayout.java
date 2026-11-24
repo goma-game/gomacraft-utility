@@ -11,7 +11,10 @@ package gomacraft.utility.search;
  *       端末の大きさ(上の空き)に依らないので、最大の大きさでも触れる。左の空きが狭い画面(形の違う端末)は
  *       {@link Mode#AROUND} に倒す。</li>
  *   <li>{@link Mode#EMI}(EMI の検索欄): 欄の左に、欄の下端に揃えて上へ積む(EMI の欄は画面の下にある)。</li>
- *   <li>{@link Mode#AROUND}(コンパスなど): 欄の上。上が狭いときは、端末なら左の外、端末でない画面なら欄の下。
+ *   <li>{@link Mode#RIGHT}(コンパス): 欄の右の空きに 1 行。広げたら右と下へ。</li>
+ *   <li>幅は字の長さで変えない(広げた形は空きいっぱいの決まった幅)。はみ出す語は描く側が「…」で切り、選んだ行・
+ *       カーソルを合わせた行は横に流して全文を見せる({@link #marqueeOffset})。</li>
+ *   <li>{@link Mode#AROUND}(狭いときの逃げ場): 欄の上。上が狭いときは、端末なら左の外、端末でない画面なら欄の下。
  *       操作の案内は、欄から遠い側に置く(広げても行がずれない)。</li>
  * </ul>
  */
@@ -30,7 +33,7 @@ public final class HistoryLayout {
     /** 小さい形で見出しを埋めるのに要る幅(これより狭ければ、広げた形の左の端から埋める)。 */
     static final int MIN_TITLE_WIDTH = 40;
 
-    public enum Mode { AROUND, TERMINAL, EMI }
+    public enum Mode { AROUND, TERMINAL, EMI, RIGHT }
 
     public record Rect(int x, int y, int width, int height) {
         public int right() {
@@ -57,14 +60,14 @@ public final class HistoryLayout {
     /**
      * @param field        検索欄の見た目の枠
      * @param panelLeft    端末の左の端(端末でなければ 0)
+     * @param sideRight    {@link Mode#RIGHT} の小さい形の右の端(欄の右の空きの終わり。ほかの形は使わない)
      * @param container    端末(品の欄を持つ画面)か
      * @param wanted       出したい行の数
-     * @param contentWidth 行と案内の字の幅(余白を含む)
      * @param hintLines    案内の行の数(広げた形だけ。0 なら出さない)
      * @param wide         広げた形か
      */
-    public record Input(Mode mode, int screenWidth, int screenHeight, Rect field, int panelLeft, boolean container,
-                        int wanted, int contentWidth, int hintLines, boolean wide) {
+    public record Input(Mode mode, int screenWidth, int screenHeight, Rect field, int panelLeft, int sideRight,
+                        boolean container, int wanted, int hintLines, boolean wide) {
     }
 
     /**
@@ -84,6 +87,7 @@ public final class HistoryLayout {
         return switch (in.mode()) {
             case TERMINAL -> terminal(in);
             case EMI -> emi(in);
+            case RIGHT -> right(in);
             case AROUND -> around(in);
         };
     }
@@ -102,9 +106,8 @@ public final class HistoryLayout {
         int titleLeft = in.panelLeft() + TITLE_INSET;
         int compactLeft = right - titleLeft >= MIN_TITLE_WIDTH ? titleLeft : limit;
         int compactWidth = right - compactLeft;
-        int width = in.wide()
-                ? Math.max(compactWidth, Math.min(Math.min(in.contentWidth(), MAX_WIDTH), right - limit))
-                : compactWidth;
+        // 幅は字の長さで変えない(広げた形はいつも空きいっぱい —— 4 回目の確かめの 1。はみ出す語は描く側が切る)
+        int width = in.wide() ? Math.max(compactWidth, Math.min(MAX_WIDTH, right - limit)) : compactWidth;
         // 1 行の枠(高さ 15)を、欄の見た目の枠(高さ 12)と上下でほぼ揃える(見出しの下の端を越えない)
         int top = Math.max(0, field.y() - 2);
         // 小さい形は見出しに収まる 1 行だけ。広げたら、画面の下の端まで
@@ -127,11 +130,67 @@ public final class HistoryLayout {
         int hint = in.wide() ? hintHeight(in) : 0;
         int room = (bottom - PAD * 2 - hint) / ROW;
         int rows = Math.max(1, Math.min(in.wanted(), room));
-        int width = Math.max(MIN_SIDE_WIDTH, Math.min(Math.min(in.contentWidth(), MAX_WIDTH), right));
+        // 幅は字の長さで変えない(小さい形も広げた形も同じ幅)
+        int width = Math.max(MIN_SIDE_WIDTH, Math.min(MAX_WIDTH, right));
         int height = rows * ROW + PAD * 2 + hint;
         int top = Math.max(0, bottom - height);
         int hintTop = top + PAD;
         return new Placement(new Rect(right - width, top, width, height), hintTop + hint, rows, true, hintTop);
+    }
+
+    /**
+     * 欄の右の空き(コンパス。4 回目の確かめの 3 —— 欄の下に出すと 1 番目の結果を隠した)。小さい形は空きに収まる 1 行、
+     * 広げたら同じ左端・上端のまま右と下へ(結果の一覧に重なってよい)。空きが狭ければ前の置き方。
+     */
+    private static Placement right(Input in) {
+        Rect field = in.field();
+        int left = field.right() + GAP;
+        int screenRight = in.screenWidth() - 2;
+        int compactWidth = Math.min(in.sideRight(), screenRight) - left;
+        if (compactWidth < MIN_TITLE_WIDTH) {
+            // 右の空き(右上のボタンの手前)が狭い画面(GUI が大きい)は、ボタンに重ねてでも画面の右の端まで使う(欄に
+            // focus があるあいだだけ。欄の下に出すと 1 番目の結果を隠す)。それでも狭ければ前の置き方
+            compactWidth = screenRight - left;
+            if (compactWidth < MIN_TITLE_WIDTH) {
+                return around(in);
+            }
+        }
+        int width = in.wide() ? Math.max(compactWidth, Math.min(MAX_WIDTH, screenRight - left)) : compactWidth;
+        // 1 行の枠(高さ 15)を欄の高さの中ほどに
+        int top = Math.max(0, field.y() + (field.height() - ROW - PAD * 2) / 2);
+        int hint = in.wide() ? hintHeight(in) : 0;
+        int count = in.wide() ? in.wanted() : 1;
+        int room = (in.screenHeight() - top - PAD * 2 - hint) / ROW;
+        int rows = Math.max(1, Math.min(count, room));
+        int height = rows * ROW + PAD * 2 + hint;
+        int rowsTop = top + PAD;
+        return new Placement(new Rect(left, top, width, height), rowsTop, rows, false, rowsTop + rows * ROW);
+    }
+
+    /**
+     * 枠に収まらない行を、横に流して全文を見せるときのずれ(左へ動かす量)。初めと終わりで少し止まり、行き来する。
+     *
+     * @param elapsedMs 流し始めてからの時間
+     * @param overflow  はみ出す幅(0 以下なら流さない)
+     */
+    public static int marqueeOffset(long elapsedMs, int overflow) {
+        if (overflow <= 0) {
+            return 0;
+        }
+        long pause = 800;
+        long travel = overflow * 1000L / 30;
+        long cycle = (pause + travel) * 2;
+        long t = Math.floorMod(elapsedMs, cycle);
+        if (t < pause) {
+            return 0;
+        }
+        if (t < pause + travel) {
+            return (int) ((t - pause) * overflow / travel);
+        }
+        if (t < pause * 2 + travel) {
+            return overflow;
+        }
+        return (int) (overflow - (t - pause * 2 - travel) * overflow / travel);
     }
 
     /** 前からの置き方(欄の上。狭ければ端末は左の外、端末でない画面は欄の下)。 */
@@ -155,7 +214,8 @@ public final class HistoryLayout {
             int below = (in.screenHeight() - start - PAD * 2 - hint) / ROW;
             rows = Math.max(1, Math.min(count, below));
         }
-        int width = Math.min(Math.max(field.width(), in.contentWidth()), Math.max(field.width(), MAX_WIDTH));
+        // 幅は字の長さで変えない
+        int width = Math.max(field.width(), Math.min(MAX_WIDTH, in.screenWidth() - 2));
         int height = rows * ROW + PAD * 2 + hint;
         int x;
         int top;

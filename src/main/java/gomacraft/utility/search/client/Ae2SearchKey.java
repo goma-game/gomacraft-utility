@@ -28,6 +28,10 @@ import org.lwjgl.glfw.GLFW;
  *       AE2 の検索欄)、それ以外(持ち物・EMI の一覧)なら AE2 の検索欄。</li>
  *   <li>F を <b>EMI の検索欄の上</b>で押したら、EMI の検索語を AE2 の検索欄へ写す(AE2 と EMI の検索を同期していないときに
  *       使う —— ユーザの指定、goma-org/gomabase#2295)。同じことをする専用のキーもある(既定は割り当てなし)。</li>
+ *   <li>逆に、F を <b>AE2 の検索欄の上</b>で押したら(欄に focus が無いとき)、AE2 の検索語を EMI の検索欄へ入れる
+ *       (4 回目の確かめの 2)。欄が空なら何もしない。⚠ 同じ機能に置く: 同じ F のキー・同じ「打っている最中は何もしない」と
+ *       「続く文字を捨てる」の決まりを使い、EMI の検索欄の上の F と対になる操作なので、別の機能にすると片方だけ切れて
+ *       F の意味が欄によって変わる。</li>
  * </ul>
  *
  * <p>文字を打っている最中(AE2 の検索欄・ほかの入力欄・EMI の検索欄に focus がある)は何もしない。
@@ -89,6 +93,23 @@ public final class Ae2SearchKey {
             if (EmiBridge.isMouseOverSearch(mouse[0], mouse[1])) {
                 fill = false;
                 copy = true;
+            }
+        }
+        if (fill && emi() && field != null && field.isVisible()) {
+            // F を AE2 の検索欄の上で押したら(打っていないとき)、欄の語を EMI の検索欄へ入れる(EMI の検索欄の上の F の
+            // 逆 —— 4 回目の確かめの 2)。欄が空なら何もしない(キーも止めない)
+            double[] mouse = mouse();
+            if (field.isMouseOver(mouse[0], mouse[1])) {
+                String value = field.getValue();
+                if (value == null || value.isBlank()) {
+                    return;
+                }
+                EmiBridge.setSearchText(value);
+                Ae2SearchHistory.recordFromOtherFeature(value);
+                swallowCharFor = screen;
+                swallowKey = KEY;
+                event.setCanceled(true);
+                return;
             }
         }
         String text;
