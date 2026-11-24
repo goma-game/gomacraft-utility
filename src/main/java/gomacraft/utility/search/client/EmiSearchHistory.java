@@ -1,6 +1,5 @@
 package gomacraft.utility.search.client;
 
-import gomacraft.utility.Features;
 import gomacraft.utility.feature.FeatureContext;
 import gomacraft.utility.search.HistoryLayout;
 import gomacraft.utility.search.SearchFeatures;
@@ -10,8 +9,6 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * EMI の検索欄の検索語の履歴(goma-org/gomabase#2295 の 2 回目の確かめの 2)。ウィンドウの形と操作は
@@ -31,8 +28,6 @@ import net.neoforged.neoforge.common.NeoForge;
  */
 public final class EmiSearchHistory {
     private static SearchHistoryOverlay overlay;
-    /** 前の tick に EMI の検索欄に focus があったか。 */
-    private static boolean focused;
 
     private EmiSearchHistory() {
     }
@@ -64,21 +59,8 @@ public final class EmiSearchHistory {
                 return false;
             }
         }), true);
+        // 欄から focus が外れたら記すのは、ウィンドウの共通の決まり(SearchHistoryOverlay の watchFocus)
         overlay.register();
-        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, event -> guard(EmiSearchHistory::watch));
-    }
-
-    private static void guard(Runnable body) {
-        Features.guard(SearchFeatures.EMI_SEARCH_HISTORY, body);
-    }
-
-    /** EMI の検索欄から focus が外れたら、その語を記す(どの画面でも)。 */
-    private static void watch() {
-        boolean now = EmiBridge.isSearchFocused();
-        if (focused && !now && overlay != null) {
-            overlay.record(EmiBridge.getSearchText());
-        }
-        focused = now;
     }
 
     /** EMI が押したのを扱う前に呼ばれる(mixin)。ウィンドウで扱ったら true。 */

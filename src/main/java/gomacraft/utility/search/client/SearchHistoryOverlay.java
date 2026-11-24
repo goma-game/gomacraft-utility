@@ -3,6 +3,7 @@ package gomacraft.utility.search.client;
 import gomacraft.utility.Features;
 import gomacraft.utility.GomacraftUtility;
 import gomacraft.utility.feature.FeatureRegistry;
+import gomacraft.utility.search.FocusRecorder;
 import gomacraft.utility.search.HistoryLayout;
 import gomacraft.utility.search.SearchHistorySettings;
 import gomacraft.utility.search.SearchHistoryStore;
@@ -18,6 +19,7 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.fml.loading.FMLPaths;
+import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.RenderTooltipEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -35,7 +37,8 @@ import org.lwjgl.glfw.GLFW;
  *       出さない({@link RenderTooltipEvent.Pre} を止める)。描く順(z)で上に出すのではなく止めるのは、ツールチップが
  *       カーソルの位置で大きさも向きも変わり、重ならない置き方を決められないため。</li>
  *   <li>一覧の上でホイールを回すと古いものへ遡る。</li>
- *   <li>記すのは、Enter・欄の外を押したとき・画面を閉じたとき(打つ 1 字ごとには記さない)。</li>
+ *   <li>記すのは、欄の focus が外れたとき(Enter・欄の外を押す、など)・Enter・履歴の語を使ったとき・画面を閉じたとき
+ *       (打つ 1 字ごとには記さない。契機の決め方は {@link FocusRecorder})。</li>
  *   <li>左で使う、右で消す、Shift + 左か中でお気に入りを付け外し。↑↓で選び、Enter で使う。操作の案内は広げたときに出す。</li>
  *   <li>履歴は手元の {@code config/gomacraft_utility/search_history.json} に置く(サーバには送らない)。ファイルは 1 つで、
  *       ウィンドウごとに別の帳({@code scope})を持つ(アイテムの語とバイオームの語を混ぜない。AE2 と EMI は同じ帳)。</li>
@@ -102,6 +105,8 @@ public final class SearchHistoryOverlay {
     private Box shown;
     private HistoryLayout.Rect shownField;
     private Screen shownScreen;
+    /** 語を記す契機(focus が外れた・閉じた —— 欄の様子で決める)。 */
+    private final FocusRecorder recorder = new FocusRecorder();
     /** このウィンドウで押したので、続く離す操作も画面へ通さない。 */
     private boolean swallowRelease;
 
@@ -203,6 +208,18 @@ public final class SearchHistoryOverlay {
         }));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.MouseScrolled.Pre.class, event -> guard(() -> onScroll(event)));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.Closing.class, event -> guard(() -> onClose(event.getScreen())));
+        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, event -> guard(this::watchFocus));
+    }
+
+    /** 欄の focus が外れたら、その語を記す(Enter・欄の外を押す・Tab など、どの道で外れても —— {@link FocusRecorder})。 */
+    private void watchFocus() {
+        Screen screen = Minecraft.getInstance().screen;
+        EditBox field = screen == null ? null : field(screen);
+        boolean present = field != null && field.isVisible();
+        String text = recorder.observe(present, present && field.isFocused(), present ? field.getValue() : "");
+        if (text != null) {
+            record(text);
+        }
     }
 
     private void guard(Runnable body) {
@@ -512,8 +529,7 @@ public final class SearchHistoryOverlay {
         }
         if (index < 0) {
             if (!field.isMouseOver(mouseX, mouseY)) {
-                // 欄の外を押した(focus が外れる)。今の語を記す
-                record(field.getValue());
+                // 欄の外を押した(focus が外れる。語は focus が外れたのを見て記す —— watchFocus)
                 selected = -1;
                 scroll = 0;
             }
@@ -555,8 +571,11 @@ public final class SearchHistoryOverlay {
     private void onClose(Screen screen) {
         Host host = host(screen);
         EditBox field = host == null ? null : host.field(screen);
-        if (field != null && field.isVisible() && (host.recordOnClose() || field.isFocused())) {
-            record(field.getValue());
+        boolean present = field != null && field.isVisible();
+        String text = recorder.close(present, present && field.isFocused(), present ? field.getValue() : "",
+                host != null && host.recordOnClose());
+        if (text != null) {
+            record(text);
         }
         selected = -1;
         scroll = 0;

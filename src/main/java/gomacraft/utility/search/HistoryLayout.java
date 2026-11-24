@@ -11,7 +11,8 @@ package gomacraft.utility.search;
  *       端末の大きさ(上の空き)に依らないので、最大の大きさでも触れる。左の空きが狭い画面(形の違う端末)は
  *       {@link Mode#AROUND} に倒す。</li>
  *   <li>{@link Mode#EMI}(EMI の検索欄): 欄の左に、欄の下端に揃えて上へ積む(EMI の欄は画面の下にある)。</li>
- *   <li>{@link Mode#AROUND}(コンパスなど): 欄の上。上が狭いときは、端末なら左の外、端末でない画面なら欄の下。</li>
+ *   <li>{@link Mode#AROUND}(コンパスなど): 欄の上。上が狭いときは、端末なら左の外、端末でない画面なら欄の下。
+ *       操作の案内は、欄から遠い側に置く(広げても行がずれない)。</li>
  * </ul>
  */
 public final class HistoryLayout {
@@ -169,7 +170,13 @@ public final class HistoryLayout {
             x = Math.max(0, Math.min(field.x(), in.screenWidth() - width - 1));
             top = belowTop;
         }
-        int hintTop = top + PAD;
-        return new Placement(new Rect(x, top, width, height), hintTop + hint, rows, upward, hintTop);
+        // 案内の行は、欄から遠い側に置く(欄の上に出すときは一番上、欄の下・左の外に出すときは一番下)。欄に近い側に
+        // 置くと、広げたとき(案内が出たとき)に行の位置がずれる(goma-org/gomabase#2295 の 3 回目の確かめの 2)
+        if (upward) {
+            int hintTop = top + PAD;
+            return new Placement(new Rect(x, top, width, height), hintTop + hint, rows, true, hintTop);
+        }
+        int rowsTop = top + PAD;
+        return new Placement(new Rect(x, top, width, height), rowsTop, rows, false, rowsTop + rows * ROW);
     }
 }
