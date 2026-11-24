@@ -10,6 +10,7 @@ import gomacraft.utility.search.SearchHistoryStore;
 import gomacraft.utility.settings.Settings;
 import java.nio.file.Path;
 import java.util.List;
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
@@ -31,7 +32,7 @@ import org.lwjgl.glfw.GLFW;
  *
  * <ul>
  *   <li>検索欄に focus があるあいだ出す。置き方は欄ごとに {@link HistoryLayout}(AE2 の端末は欄の左の見出しの所、
- *       EMI は欄の左、コンパスは欄の上)。カーソルを合わせると広げる。入力中は入力に合う語だけを出し、合うものが無ければ
+ *       EMI は欄の左、コンパスは欄の右の空き —— 狭ければボタンの行の下)。小さい形で出し、カーソルを合わせると広げる。入力中は入力に合う語だけを出し、合うものが無ければ
  *       出さない。</li>
  *   <li>出しているあいだは、ウィンドウと欄の上のツールチップ(AE2 の「名前で検索」、ウィンドウの下のアイテムのもの)を
  *       出さない({@link RenderTooltipEvent.Pre} を止める)。描く順(z)で上に出すのではなく止めるのは、ツールチップが
@@ -39,6 +40,7 @@ import org.lwjgl.glfw.GLFW;
  *   <li>一覧の上でホイールを回すと古いものへ遡る。</li>
  *   <li>記すのは、欄の focus が外れたとき(Enter・欄の外を押す、など)・Enter・履歴の語を使ったとき・画面を閉じたとき
  *       (打つ 1 字ごとには記さない。契機の決め方は {@link FocusRecorder})。</li>
+ *   <li>幅は字の長さで変えない。はみ出す語は「…」で切り、カーソルを合わせた行・↑↓で選んだ行は横に流して全文を見せる。</li>
  *   <li>左で使う、右で消す、Shift + 左か中でお気に入りを付け外し。↑↓で選び、Enter で使う。操作の案内は広げたときに出す。</li>
  *   <li>履歴は手元の {@code config/gomacraft_utility/search_history.json} に置く(サーバには送らない)。ファイルは 1 つで、
  *       ウィンドウごとに別の帳({@code scope})を持つ(アイテムの語とバイオームの語を混ぜない。AE2 と EMI は同じ帳)。</li>
@@ -63,6 +65,11 @@ public final class SearchHistoryOverlay {
             return new HistoryLayout.Rect(field.getX(), field.getY(), field.getWidth(), field.getHeight());
         }
 
+        /** 欄の右に出す形({@link HistoryLayout.Mode#RIGHT})の、小さい形の右の端(右の空きの終わり)。 */
+        default int sideRight(Screen screen) {
+            return screen.width;
+        }
+
         /** 画面を閉じたときに欄の語を記すか(EMI の欄は画面をまたいで語が残るので、閉じるたびには記さない)。 */
         default boolean recordOnClose() {
             return true;
@@ -72,6 +79,7 @@ public final class SearchHistoryOverlay {
     private static final int ROW = HistoryLayout.ROW;
     private static final int PAD = HistoryLayout.PAD;
     private static final String FAVORITE_MARK = "★ ";
+    private static final String ELLIPSIS = "…";
     private static final int MAX_WRITE_FAILURES = 3;
     /** 描く高さ(ツールチップの 400 より上)。 */
     private static final int Z = 500;
@@ -105,6 +113,9 @@ public final class SearchHistoryOverlay {
     private Box shown;
     private HistoryLayout.Rect shownField;
     private Screen shownScreen;
+    /** 横に流している行の語と、流し始めた時刻(行が変われば頭から流す)。 */
+    private String marqueeText;
+    private long marqueeStart;
     /** 語を記す契機(focus が外れた・閉じた —— 欄の様子で決める)。 */
     private final FocusRecorder recorder = new FocusRecorder();
     /** このウィンドウで押したので、続く離す操作も画面へ通さない。 */
@@ -328,19 +339,11 @@ public final class SearchHistoryOverlay {
         boolean typing = !field.getValue().isBlank();
         int wanted = typing || wide ? visibleRows() : collapsedRows();
         List<String> hint = wide ? hintLines() : List.of();
-        Font font = Minecraft.getInstance().font;
-        int content = 0;
-        for (SearchHistoryStore.Entry entry : all.subList(Math.min(scroll, all.size()),
-                Math.min(all.size(), scroll + wanted))) {
-            content = Math.max(content, font.width(label(entry)) + PAD * 2 + 2);
-        }
-        for (String line : hint) {
-            content = Math.max(content, font.width(line) + PAD * 2);
-        }
         boolean container = screen instanceof AbstractContainerScreen<?>;
         int panelLeft = screen instanceof AbstractContainerScreen<?> c ? c.getGuiLeft() : 0;
         HistoryLayout.Placement p = HistoryLayout.place(new HistoryLayout.Input(host.mode(), screen.width,
-                screen.height, host.bounds(field), panelLeft, container, wanted, content, hint.size(), wide));
+                screen.height, host.bounds(field), panelLeft, host.sideRight(screen), container, wanted, hint.size(),
+                wide));
         int count = p.rows();
         // 候補は貼り付け・Backspace・削除で減る。選んだ行と先頭の位置を、今の候補の数とこの形の行の数で丸める。
         // ⚠ ここでは scroll を書き換えない(小さい形と広げた形の両方を作るので、書き換えると選んだ行が動くたびに一覧が
@@ -428,10 +431,14 @@ public final class SearchHistoryOverlay {
         g.pose().translate(0, 0, Z);
         g.fill(r.x() - 1, r.y() - 1, r.right() + 1, r.bottom() + 1, 0xFF8B8B8B);
         g.fill(r.x(), r.y(), r.right(), r.bottom(), 0xF0101010);
+        int avail = r.width() - PAD * 2;
         for (int i = 0; i < box.hint().size(); i++) {
-            String line = font.plainSubstrByWidth(box.hint().get(i), r.width() - PAD * 2);
-            g.drawString(font, line, r.x() + PAD, box.hintTop() + i * ROW + 2, 0xFF9A9A9A, false);
+            g.drawString(font, ellipsize(font, box.hint().get(i), avail), r.x() + PAD, box.hintTop() + i * ROW + 2,
+                    0xFF9A9A9A, false);
         }
+        // 横に流すのは 1 行だけ: カーソルを合わせた行、無ければ ↑↓ で選んだ行
+        int flowing = hovered >= 0 ? hovered : selected;
+        boolean flowed = false;
         for (int i = 0; i < box.rows().size(); i++) {
             SearchHistoryStore.Entry entry = box.rows().get(i);
             int index = box.first() + i;
@@ -439,10 +446,39 @@ public final class SearchHistoryOverlay {
             if (index == selected || index == hovered) {
                 g.fill(r.x() + 1, y, r.right() - 1, y + ROW, 0x60FFFFFF);
             }
-            String text = font.plainSubstrByWidth(label(entry), r.width() - PAD * 2);
-            g.drawString(font, text, r.x() + PAD, y + 2, entry.favorite() ? 0xFFFFD866 : 0xFFE0E0E0, false);
+            String text = label(entry);
+            int color = entry.favorite() ? 0xFFFFD866 : 0xFFE0E0E0;
+            int overflow = font.width(text) - avail;
+            if (overflow <= 0) {
+                g.drawString(font, text, r.x() + PAD, y + 2, color, false);
+            } else if (index == flowing) {
+                // はみ出す語は横に流して全文を見せる(枠の中だけに描く)
+                if (!text.equals(marqueeText)) {
+                    marqueeText = text;
+                    marqueeStart = Util.getMillis();
+                }
+                flowed = true;
+                int offset = HistoryLayout.marqueeOffset(Util.getMillis() - marqueeStart, overflow);
+                g.enableScissor(r.x() + PAD, y, r.right() - PAD, y + ROW);
+                g.drawString(font, text, r.x() + PAD - offset, y + 2, color, false);
+                g.disableScissor();
+            } else {
+                g.drawString(font, ellipsize(font, text, avail), r.x() + PAD, y + 2, color, false);
+            }
+        }
+        if (!flowed) {
+            // どの行も流れないコマでは、流し始めを戻す(同じ行へ戻ったときも頭から流す)
+            marqueeText = null;
         }
         g.pose().popPose();
+    }
+
+    /** 幅に収まらない語を「…」で切る。 */
+    private static String ellipsize(Font font, String text, int width) {
+        if (font.width(text) <= width) {
+            return text;
+        }
+        return font.plainSubstrByWidth(text, Math.max(0, width - font.width(ELLIPSIS))) + ELLIPSIS;
     }
 
     /**
@@ -585,6 +621,7 @@ public final class SearchHistoryOverlay {
         selected = -1;
         scroll = 0;
         expanded = false;
+        marqueeText = null;
         shown = null;
         shownScreen = null;
         shownField = null;

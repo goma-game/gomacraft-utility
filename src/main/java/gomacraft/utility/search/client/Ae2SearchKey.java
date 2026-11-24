@@ -2,6 +2,7 @@ package gomacraft.utility.search.client;
 
 import appeng.client.gui.me.common.MEStorageScreen;
 import appeng.client.gui.me.common.RepoSlot;
+import appeng.client.gui.widgets.AETextField;
 import com.mojang.blaze3d.platform.InputConstants;
 import gomacraft.utility.Features;
 import gomacraft.utility.feature.FeatureContext;
@@ -11,6 +12,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.renderer.Rect2i;
 import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.client.event.RegisterKeyMappingsEvent;
 import net.neoforged.neoforge.client.event.ScreenEvent;
@@ -28,6 +30,10 @@ import org.lwjgl.glfw.GLFW;
  *       AE2 の検索欄)、それ以外(持ち物・EMI の一覧)なら AE2 の検索欄。</li>
  *   <li>F を <b>EMI の検索欄の上</b>で押したら、EMI の検索語を AE2 の検索欄へ写す(AE2 と EMI の検索を同期していないときに
  *       使う —— ユーザの指定、goma-org/gomabase#2295)。同じことをする専用のキーもある(既定は割り当てなし)。</li>
+ *   <li>逆に、F を <b>AE2 の検索欄の上</b>で押したら(欄に focus が無いとき)、AE2 の検索語を EMI の検索欄へ入れる
+ *       (4 回目の確かめの 2)。欄が空なら何もしない。⚠ 同じ機能に置く: 同じ F のキー・同じ「打っている最中は何もしない」と
+ *       「続く文字を捨てる」の決まりを使い、EMI の検索欄の上の F と対になる操作なので、別の機能にすると片方だけ切れて
+ *       F の意味が欄によって変わる。</li>
  * </ul>
  *
  * <p>文字を打っている最中(AE2 の検索欄・ほかの入力欄・EMI の検索欄に focus がある)は何もしない。
@@ -82,13 +88,36 @@ public final class Ae2SearchKey {
         if ((!fill && !copy) || typing(screen)) {
             return;
         }
-        EditBox field = ((MEStorageScreenKeyAccessor) screen).gomacraftUtility$keySearchField();
+        AETextField field = ((MEStorageScreenKeyAccessor) screen).gomacraftUtility$keySearchField();
         if (fill && emi()) {
             // F を EMI の検索欄の上で押したら、EMI の検索語を AE2 の検索欄へ写す(ユーザの指定 —— #2295)
             double[] mouse = mouse();
             if (EmiBridge.isMouseOverSearch(mouse[0], mouse[1])) {
                 fill = false;
                 copy = true;
+            }
+        }
+        boolean alt = (event.getModifiers() & GLFW.GLFW_MOD_ALT) != 0;
+        if (fill && !alt && emi() && field != null && field.isVisible()) {
+            // F を AE2 の検索欄の上で押したら(打っていないとき)、欄の語を EMI の検索欄へ入れる(EMI の検索欄の上の F の
+            // 逆 —— 4 回目の確かめの 2)。欄が空・EMI の検索欄が出ていない・Alt + F のときは何もしない(キーも止めない)。
+            // 欄の上かは、欄の見た目の枠(AE2 のツールチップの枠と同じ)で見る
+            double[] mouse = mouse();
+            Rect2i area = field.getTooltipArea();
+            if (area.contains((int) mouse[0], (int) mouse[1])) {
+                if (EmiBridge.searchField() == null) {
+                    return;
+                }
+                String value = field.getValue();
+                if (value == null || value.isBlank()) {
+                    return;
+                }
+                EmiBridge.setSearchText(value);
+                Ae2SearchHistory.recordFromOtherFeature(value);
+                swallowCharFor = screen;
+                swallowKey = KEY;
+                event.setCanceled(true);
+                return;
             }
         }
         String text;
