@@ -33,7 +33,11 @@ public final class NaturesCompassFilters {
         if (!Settings.client().get(CompassFilterSettings.NATURES)) {
             return false;
         }
-        String raw = ((NaturesCompassScreenAccessor) screen).gomacraftUtility$searchField().getValue();
+        var searchField = ((NaturesCompassScreenAccessor) screen).gomacraftUtility$searchField();
+        if (searchField == null) {
+            return false;
+        }
+        String raw = searchField.getValue();
         if (!CompassQuery.takesOver(raw, KINDS)) {
             return false;
         }

@@ -1,12 +1,17 @@
 package gomacraft.utility.settings;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -143,5 +148,39 @@ class ClientSettingsTest {
         String text = Files.readString(dir.resolve(ClientSettings.FILE_NAME));
         assertTrue(text.contains("[emi_ae_quick_craft]\nskip_confirm = false"), text);
         assertTrue(text.contains("default_target = \"chat\""), text);
+    }
+
+    @Test
+    void updateAndSaveCommitsAllChanges(@TempDir Path dir) throws Exception {
+        ClientSettings s = settings();
+        s.load(dir, w -> { });
+        AtomicInteger fired = new AtomicInteger();
+        s.onChange(fired::incrementAndGet);
+
+        s.updateAndSave(Map.of(SKIP, true, TARGET, "both"));
+        assertEquals(true, s.get(SKIP));
+        assertEquals("both", s.get(TARGET));
+        assertEquals(1, fired.get());
+
+        ClientSettings reloaded = settings();
+        reloaded.load(dir, w -> { });
+        assertEquals(true, reloaded.get(SKIP));
+        assertEquals("both", reloaded.get(TARGET));
+    }
+
+    @Test
+    void updateAndSaveRestoresMemoryOnFailure(@TempDir Path dir) throws Exception {
+        Path file = dir.resolve(ClientSettings.FILE_NAME);
+        byte[] notUtf8 = {(byte) 0xff, (byte) 0xfe, 'x', '\n'};
+        Files.write(file, notUtf8);
+        ClientSettings s = settings();
+        s.load(dir, w -> { });
+        AtomicInteger fired = new AtomicInteger();
+        s.onChange(fired::incrementAndGet);
+
+        assertThrows(IOException.class, () -> s.updateAndSave(Map.of(SKIP, true, TARGET, "both")));
+        assertFalse(s.get(SKIP), "保存失敗時はメモリ上の変更も元に戻す");
+        assertEquals("chat", s.get(TARGET));
+        assertEquals(0, fired.get(), "保存失敗時は変更通知を出さない");
     }
 }

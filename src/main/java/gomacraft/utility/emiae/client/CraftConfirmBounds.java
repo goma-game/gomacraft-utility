@@ -24,7 +24,7 @@ final class CraftConfirmBounds {
             }
             return Features.guard(EmiAeFeatures.CRAFT_CONFIRM,
                     () -> new Bounds(confirm.getGuiLeft(), confirm.getGuiTop(), confirm.getXSize(), confirm.getYSize()),
-                    Bounds.EMPTY);
+                    null);
         });
     }
 }

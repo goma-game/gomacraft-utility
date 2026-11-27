@@ -30,7 +30,11 @@ public final class ExplorersCompassFilters {
         if (!Settings.client().get(CompassFilterSettings.EXPLORERS)) {
             return false;
         }
-        String raw = ((ExplorersCompassScreenAccessor) screen).gomacraftUtility$searchField().getValue();
+        var searchField = ((ExplorersCompassScreenAccessor) screen).gomacraftUtility$searchField();
+        if (searchField == null) {
+            return false;
+        }
+        String raw = searchField.getValue();
         if (!CompassQuery.takesOver(raw, KINDS)) {
             return false;
         }

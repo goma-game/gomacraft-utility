@@ -119,4 +119,14 @@ class SearchHistoryStoreTest {
             assertThrows(RuntimeException.class, () -> SearchHistoryStore.load(file), bad);
         }
     }
+
+    @Test
+    void reRecordingLatestRecentEntryReturnsFalse() {
+        SearchHistoryStore store = new SearchHistoryStore(3);
+        assertTrue(store.record("p", "first"));
+        assertTrue(store.record("p", "second"));
+        assertFalse(store.record("p", "second"), "直近先頭と同じ語の再記録は書き換えない");
+        assertTrue(store.record("p", "first"), "2 番目以降の語は先頭へ移るので変更あり");
+        assertEquals(List.of("first", "second"), texts(store, "p"));
+    }
 }

@@ -96,4 +96,26 @@ class PrimaryCacheTest {
         }
         assertTrue(c.size() <= PrimaryCache.LIMIT, "上限を越えて溜めた: " + c.size());
     }
+
+    @Test
+    void usesReferenceIdentityNotEquals() {
+        final class CollidingCell {
+            @Override
+            public int hashCode() {
+                return 42;
+            }
+
+            @Override
+            public boolean equals(Object obj) {
+                return obj instanceof CollidingCell;
+            }
+        }
+        PrimaryCache c = new PrimaryCache();
+        CollidingCell a = new CollidingCell();
+        CollidingCell b = new CollidingCell();
+        c.put(a, 1, true);
+        c.put(b, 1, false);
+        assertEquals(Boolean.TRUE, c.get(a, 1));
+        assertEquals(Boolean.FALSE, c.get(b, 1));
+    }
 }

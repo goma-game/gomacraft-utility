@@ -49,4 +49,18 @@ class CompassQueryTest {
         assertFalse(CompassQuery.matches(CompassQuery.parse("@biomesoplenty ~overworld", NATURES), biome::get),
                 "別のディメンションでは当たらない");
     }
+
+    @Test
+    void splitsAndCompactsFullWidthSpaces() {
+        Map<CompassQuery.Kind, List<String>> biome = Map.of(
+                CompassQuery.Kind.NAME, List.of("針葉樹林\nConiferous Forest"),
+                CompassQuery.Kind.SOURCE, List.of("Biomes O' Plenty", "biomesoplenty"),
+                CompassQuery.Kind.TAG, List.of("#minecraft:is_forest"),
+                CompassQuery.Kind.DIMENSION, List.of("minecraft:the_nether", "the nether", "ネザー"),
+                CompassQuery.Kind.GROUP, List.of());
+        assertTrue(CompassQuery.takesOver("#forest\u3000~nether", NATURES));
+        assertTrue(CompassQuery.takesOver("forest\u3000~nether", NATURES));
+        assertTrue(CompassQuery.matches(CompassQuery.parse("#forest\u3000~nether", NATURES), biome::get));
+        assertTrue(CompassQuery.matches(CompassQuery.parse("forest\u3000@biomes\u3000~nether", NATURES), biome::get));
+    }
 }

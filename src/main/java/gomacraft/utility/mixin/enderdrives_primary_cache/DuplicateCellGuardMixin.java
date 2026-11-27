@@ -20,6 +20,9 @@ public abstract class DuplicateCellGuardMixin {
     @Group(name = "gomacraft_utility$enderdrives_primary_cache$is_primary_head", min = 1)
     @Inject(method = "isPrimary", at = @At("HEAD"), cancellable = true, require = 0)
     private static void gomacraftUtility$cachedPrimary(DeduplicatedEnderCell cell, CallbackInfoReturnable<Boolean> cir) {
+        if (cell == null) {
+            return;
+        }
         Boolean hit = EnderDrivesPrimaryCache.hit(cell, cell::enderdrives$setDuplicateOnGrid);
         if (hit != null) {
             cir.setReturnValue(hit);
@@ -33,6 +36,9 @@ public abstract class DuplicateCellGuardMixin {
     @Group(name = "gomacraft_utility$enderdrives_primary_cache$is_primary_tail", min = 1)
     @Inject(method = "isPrimary", at = @At("TAIL"), require = 0)
     private static void gomacraftUtility$rememberPrimary(DeduplicatedEnderCell cell, CallbackInfoReturnable<Boolean> cir) {
+        if (cell == null) {
+            return;
+        }
         EnderDrivesPrimaryCache.remember(cell, cir.getReturnValueZ());
     }
 

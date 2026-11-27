@@ -32,8 +32,14 @@ public final class CompassFilters {
      * その英語(コンパスが一覧に出すのと同じ {@code dimension.<名前空間>.<名前>} の訳。在れば)。
      */
     static List<String> dimensions(List<ResourceLocation> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return List.of();
+        }
         List<String> out = new ArrayList<>();
         for (ResourceLocation dim : keys) {
+            if (dim == null) {
+                continue;
+            }
             out.add(dim.toString());
             out.add(dim.getPath().replace('_', ' '));
             String key = Util.makeDescriptionId("dimension", dim);

@@ -6,6 +6,8 @@ import gomacraft.utility.mixin.explorerscompass_search.ExplorersCompassScreenAcc
 import gomacraft.utility.mixin.naturescompass_search.NaturesCompassScreenAccessor;
 import gomacraft.utility.search.HistoryLayout;
 import gomacraft.utility.search.SearchFeatures;
+import gomacraft.utility.search.SearchHistorySettings;
+import gomacraft.utility.settings.Settings;
 import java.util.List;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
@@ -43,6 +45,9 @@ public final class CompassSearchHistory {
     }
 
     public static void init(FeatureContext context) throws Exception {
+        Settings.client().register(SearchHistorySettings.COLLAPSED_ROWS);
+        Settings.client().register(SearchHistorySettings.VISIBLE_ROWS);
+        Settings.client().register(SearchHistorySettings.KEEP);
         SearchHistoryOverlay.loadStore();
         // 前の 1 つの帳は、両方の帳へ写して分ける(今の記録を失わない。分けた後は写さない)
         SearchHistoryOverlay.splitScope(OLD_SCOPE, List.of(NATURES_SCOPE, EXPLORERS_SCOPE));
