@@ -111,7 +111,7 @@ public final class FeatureConfig {
         sb.append("# gomacraft_utility の機能ごとの有効・無効設定です。true で有効、false で無効になります。\n");
         sb.append("# 未記載の機能は既定値が使われ、true / false 以外の値は無効になります。\n");
         sb.append("# このファイルを直接編集した場合は、ゲームを再起動すると反映されます。\n");
-        sb.append("# ゲーム内の設定画面から切り替えた場合は即座に反映されますが、一部の機能は再起動が必要です。\n");
+        sb.append("# 起動時に有効だった機能は設定画面から即座にオン・オフできますが、起動時に無効だった機能を有効にするには再起動が必要です。\n");
         sb.append("[features]\n");
         for (Feature f : features) {
             sb.append(f.id()).append(" = ").append(f.enabledByDefault()).append('\n');
