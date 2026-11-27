@@ -14,7 +14,7 @@ version="${mod_version}"
 displayName="${mod_name}"
 displayURL="https://github.com/goma-game/gomacraft-utility"
 description='''
-gomacraft(ATM10)のためのユーティリティ。便利さと不具合の直しだけを持ち、新しい要素は足さない。
+gomacraft サーバー向けのユーティリティ Mod。新要素は追加せず、利便性の向上と不具合修正のみを行います。
 '''
 
 [[mixins]]

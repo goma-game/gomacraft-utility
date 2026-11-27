@@ -1,5 +1,6 @@
 package gomacraft.utility.settings;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -16,7 +17,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
 
@@ -46,6 +52,36 @@ class SettingsLangTest {
             }
         }
         assertTrue(missing.isEmpty(), "設定の画面に出す機能の名前の訳が無い: " + missing);
+    }
+
+    @Test
+    void enUsAndJaJpHaveMatchingKeysAndPlaceholders() throws Exception {
+        JsonObject en = lang("en_us");
+        JsonObject ja = lang("ja_jp");
+        Set<String> enKeys = new TreeSet<>(en.keySet());
+        Set<String> jaKeys = new TreeSet<>(ja.keySet());
+        assertEquals(enKeys, jaKeys, "en_us と ja_jp の翻訳キーが一致しない");
+
+        Pattern placeholderPattern = Pattern.compile("(?<!%)%(?:\\d+\\$)?[sd](?![a-zA-Z])");
+        List<String> mismatch = new ArrayList<>();
+        for (String key : enKeys) {
+            List<String> enPh = placeholders(placeholderPattern, en.get(key).getAsString());
+            List<String> jaPh = placeholders(placeholderPattern, ja.get(key).getAsString());
+            if (!enPh.equals(jaPh)) {
+                mismatch.add(key + ": en=" + enPh + " ja=" + jaPh);
+            }
+        }
+        assertTrue(mismatch.isEmpty(), "en_us と ja_jp のプレースホルダが一致しない: " + mismatch);
+    }
+
+    private static List<String> placeholders(Pattern pattern, String text) {
+        List<String> found = new ArrayList<>();
+        Matcher matcher = pattern.matcher(text);
+        while (matcher.find()) {
+            found.add(matcher.group());
+        }
+        Collections.sort(found);
+        return found;
     }
 
     /**
