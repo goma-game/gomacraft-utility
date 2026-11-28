@@ -27,7 +27,8 @@ public final class Ae2SortKeys {
     }
 
     public static void init() {
-        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, event -> clearCache());
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class,
+                event -> Features.guard(Ae2RepoSortCache.ID, Ae2SortKeys::clearCache));
         Features.registry().onActiveChange(Ae2RepoSortCache.ID, active -> clearCache());
     }
 
@@ -54,9 +55,6 @@ public final class Ae2SortKeys {
             return cached;
         }
         String value = key.getModId();
-        if (MODS.size() >= MAX_ENTRIES) {
-            MODS.clear();
-        }
         MODS.put(key, value);
         return value;
     }
@@ -67,9 +65,6 @@ public final class Ae2SortKeys {
             return cached;
         }
         String value = key.getDisplayName().getString();
-        if (NAMES.size() >= MAX_ENTRIES) {
-            NAMES.clear();
-        }
         NAMES.put(key, value);
         return value;
     }
@@ -97,6 +92,10 @@ public final class Ae2SortKeys {
             return original;
         }
         ensureLanguage();
+        // 上限は並べ直しの入口で 1 回だけ見る(並べ直しの途中で捨て直すと、同じ並べ直しの中で鍵を作り直す)
+        if (NAMES.size() >= MAX_ENTRIES || MODS.size() >= MAX_ENTRIES) {
+            clearCache();
+        }
         return SortKeys.order(byMod, ascending, Ae2SortKeys::cachedModId, Ae2SortKeys::cachedName);
     }
 }

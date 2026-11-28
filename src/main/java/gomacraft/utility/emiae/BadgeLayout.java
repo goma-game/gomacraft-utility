@@ -8,6 +8,12 @@ import java.util.function.Supplier;
  * 在庫数バッジ描画の位置計算とフォーマット済み数量文字列のキャッシュ(Minecraft / OpenGL 非依存)。
  *
  * <p>座標式は AE2 の {@code StackSizeRenderer} と同一に保つ。
+ *
+ * <p>⚠ 写したもの: 座標の式・倍率(0.85 / 0.666)・z の 200・影と字の色は、AE2 の
+ * {@code appeng.client.gui.me.common.StackSizeRenderer#renderSizeLabel} を写した(写した元の版は AE2 19.2.18 ——
+ * {@code gradle.properties} の {@code ae2_version}。ライセンスは AE2 のコードの LGPL-3.0)。AE2 を上げて描き方が
+ * 変われば、ここも見直す(AE2 とずれても何も赤くならない)。写してよいことは、ユーザの決定(2026-11-28、
+ * goma-org/gomabase#2295)。
  */
 public final class BadgeLayout {
     public static final float SCALE_LARGE = 0.85f;

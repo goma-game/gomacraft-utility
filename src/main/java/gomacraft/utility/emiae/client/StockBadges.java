@@ -57,7 +57,8 @@ public final class StockBadges {
     }
 
     public static void init() {
-        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, event -> resetCaches());
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class,
+                event -> Features.guard(EmiAeFeatures.STOCK, StockBadges::resetCaches));
         Features.registry().onActiveChange(EmiAeFeatures.STOCK, active -> {
             if (!active) {
                 resetCaches();
@@ -183,6 +184,10 @@ public final class StockBadges {
         }
     }
 
+    /**
+     * 数の札を、AE2 と同じ形(影と字の 2 回)で、まとめて描く口へ描く。⚠ 描き方は AE2 の
+     * {@code StackSizeRenderer#renderSizeLabel}(AE2 19.2.18。LGPL-3.0)を写した —— 出典と版は {@link BadgeLayout}。
+     */
     private static void drawBatchText(Font font, MultiBufferSource.BufferSource buffer, Matrix4f matrix,
             float x, float y, String text, boolean largeFonts) {
         int drawX = BadgeLayout.labelX(x, font.width(text), largeFonts);
