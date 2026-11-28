@@ -1,0 +1,144 @@
+name: release-fabric
+
+# fabric 版の tag(fabric-v<版>)を押したら、build-fabric と同じ検査を回してから GitHub Release を作り、jar と sha256 を
+# 置く。forge 版の release.yml の対(forge 版の tag は v<版> で、この workflow は動かない。v* は fabric-v* に当たらない)。
+# 公開は GitHub の Release だけ(ユーザ決定 2026-11-28、goma-org/gomabase#2295)。
+#
+# 2 つの job に分ける理由と、止めるものは release.yml と同じ:
+# - build-fabric: 読み取りの権限だけで、tag を確かめ、検査を回し、jar と sha256 を artifact に上げる
+# - publish-fabric: checkout も Gradle も使わず、artifact を下ろして sha256 を照合し、tag がまだ同じ commit を
+#   指すかを確かめてから release を作る
+# - 止める: tag の commit が main に無い / tag と fabric/gradle.properties の mod_version が合わない /
+#   同じ tag の release が既に在る / 検査の後に tag が別の commit へ付け替えられた
+on:
+  push:
+    tags: ['fabric-v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-fabric-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-fabric:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ github.ref_name }}
+    outputs:
+      version: ${{ steps.tag.outputs.version }}
+    defaults:
+      run:
+        working-directory: fabric
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: tag を確かめる
+        id: tag
+        run: |
+          set -eu
+          git fetch --no-tags "https://github.com/$GITHUB_REPOSITORY.git" main:refs/remotes/origin/main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" origin/main; then
+            echo "NG: tag $TAG の commit $GITHUB_SHA が main に無い" >&2
+            exit 1
+          fi
+          version=$(sed -n 's/^mod_version=//p' gradle.properties)
+          if [ "$TAG" != "fabric-v$version" ]; then
+            echo "NG: tag $TAG と fabric の mod_version=$version が合わない" >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: forge 版から写したファイルのずれを確かめる
+        run: sh ../.github/scripts/check-fabric-build.sh copies
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c  # v6.4.1
+        with:
+          cache-read-only: true
+      - name: 組み立てと試験
+        run: ./gradlew --no-daemon build
+      - name: 配る jar を確かめる
+        run: sh ../.github/scripts/check-fabric-build.sh jar
+      - name: 起動の自己検査(gametest のサーバ)
+        run: ./gradlew --no-daemon runSelftestServer
+      - name: 自己検査のログを確かめる
+        run: sh ../.github/scripts/check-fabric-build.sh selftest run-selftest/logs/latest.log
+      - name: sha256 を作る
+        run: |
+          set -eu
+          cd build/libs
+          sha256sum "gomacraft_utility-fabric-${{ steps.tag.outputs.version }}.jar" \
+            > "gomacraft_utility-fabric-${{ steps.tag.outputs.version }}.jar.sha256"
+          cat "gomacraft_utility-fabric-${{ steps.tag.outputs.version }}.jar.sha256"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: release-fabric-jar
+          path: |
+            fabric/build/libs/gomacraft_utility-fabric-${{ steps.tag.outputs.version }}.jar
+            fabric/build/libs/gomacraft_utility-fabric-${{ steps.tag.outputs.version }}.jar.sha256
+          if-no-files-found: error
+          retention-days: 7
+
+  publish-fabric:
+    needs: build-fabric
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ github.ref_name }}
+      VERSION: ${{ needs.build-fabric.outputs.version }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: release-fabric-jar
+          path: dist
+      - name: sha256 を照合する
+        run: |
+          set -eu
+          cd dist
+          ls -la
+          sha256sum -c "gomacraft_utility-fabric-$VERSION.jar.sha256"
+      - name: tag と release を確かめる
+        run: |
+          set -eu
+          ref=$(gh api "repos/$GH_REPO/git/ref/tags/$TAG" --jq '.object.type + " " + .object.sha')
+          type=${ref%% *}
+          sha=${ref#* }
+          if [ "$type" = tag ]; then
+            sha=$(gh api "repos/$GH_REPO/git/tags/$sha" --jq '.object.sha')
+          fi
+          if [ "$sha" != "$GITHUB_SHA" ]; then
+            echo "NG: tag $TAG が検査した commit $GITHUB_SHA でなく $sha を指している(付け替えられた)" >&2
+            exit 1
+          fi
+          if out=$(gh release view "$TAG" 2>&1); then
+            echo "NG: release $TAG は既に在る(上書きしない)" >&2
+            exit 1
+          elif ! printf '%s\n' "$out" | grep -q 'release not found'; then
+            echo "NG: release $TAG の有無を確かめられない: $out" >&2
+            exit 1
+          fi
+      - name: release を作る
+        run: |
+          set -eu
+          jar="dist/gomacraft_utility-fabric-$VERSION.jar"
+          digest=$(cut -d' ' -f1 "$jar.sha256")
+          {
+            echo "fabric 版(Minecraft の版は fabric/gradle.properties)。commit: $GITHUB_SHA"
+            echo
+            echo "sha256(\`$(basename "$jar")\`): \`$digest\`"
+          } > notes.md
+          # ⚠ latest にしない(gomabase は tag を名指しで引く。forge 版の release を「最新」から押し出さない)
+          gh release create "$TAG" "$jar" "$jar.sha256" --title "$TAG" --notes-file notes.md --verify-tag --latest=false
+          echo "sha256: $digest"

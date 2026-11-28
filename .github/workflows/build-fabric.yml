@@ -1,0 +1,64 @@
+name: build-fabric
+
+# fabric 版(fabric/)の組み立て・試験(JUnit)・起動の自己検査(Fabric API の gametest のサーバ)。forge 版の build.yml の対。
+# fabric/ は forge 版と別の組み立てなので、fabric の側と、forge 版の src(写しの元)を触ったときだけ回す。
+# public のリポジトリなので GitHub-hosted の runner で回す。
+on:
+  pull_request:
+    paths:
+      - 'fabric/**'
+      # forge 版から写したファイルのずれ(check-fabric-build.sh copies)を、forge 版だけを直したときにも見る
+      - 'src/**'
+      - '.github/workflows/build-fabric.yml'
+      - '.github/workflows/release-fabric.yml'
+      - '.github/scripts/check-fabric-build.sh'
+  push:
+    branches: [main]
+    paths:
+      - 'fabric/**'
+      # forge 版から写したファイルのずれ(check-fabric-build.sh copies)を、forge 版だけを直したときにも見る
+      - 'src/**'
+      - '.github/workflows/build-fabric.yml'
+      - '.github/workflows/release-fabric.yml'
+      - '.github/scripts/check-fabric-build.sh'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-fabric-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-fabric:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: fabric
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: forge 版から写したファイルのずれを確かめる
+        run: sh ../.github/scripts/check-fabric-build.sh copies
+      - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
+        with:
+          distribution: temurin
+          java-version: '25'
+      # wrapper の jar の検証(validate-wrappers)は既定で効く
+      - uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c  # v6.4.1
+      - name: 組み立てと試験
+        run: ./gradlew --no-daemon build
+      - name: 配る jar を確かめる
+        run: sh ../.github/scripts/check-fabric-build.sh jar
+      - name: 起動の自己検査(gametest のサーバ)
+        run: ./gradlew --no-daemon runSelftestServer
+      - name: 自己検査のログを確かめる
+        run: sh ../.github/scripts/check-fabric-build.sh selftest run-selftest/logs/latest.log
+      - name: ログを残す
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: selftest-fabric-logs
+          path: fabric/run-selftest/logs/
+          if-no-files-found: warn
+          retention-days: 7
