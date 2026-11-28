@@ -4,11 +4,11 @@ import appeng.api.stacks.AEFluidKey;
 import appeng.api.stacks.AEItemKey;
 import appeng.api.stacks.AEKey;
 import appeng.api.stacks.AmountFormat;
-import appeng.client.gui.me.common.StackSizeRenderer;
 import appeng.core.AEConfig;
 import appeng.menu.me.common.GridInventoryEntry;
 import appeng.menu.me.common.IClientRepo;
 import appeng.menu.me.common.MEStorageMenu;
+import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import dev.emi.emi.api.stack.EmiIngredient;
 import dev.emi.emi.api.stack.EmiStack;
@@ -17,6 +17,7 @@ import dev.emi.emi.runtime.EmiDrawContext;
 import dev.emi.emi.runtime.EmiFavorite;
 import dev.emi.emi.screen.EmiScreenManager;
 import gomacraft.utility.Features;
+import gomacraft.utility.emiae.BadgeLayout;
 import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.emiae.StockIndex;
 import java.util.IdentityHashMap;
@@ -27,10 +28,14 @@ import java.util.function.Function;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.core.component.DataComponentPatch;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.material.Fluid;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.fluids.FluidStack;
+import org.joml.Matrix4f;
 
 /**
  * EMI の一覧の品に、AE のネットワークの在庫数(右下)と「クラフト可」の印(左上の +)を描く。
@@ -45,8 +50,25 @@ public final class StockBadges {
     /** EMI の品 → AE の鍵。品の実体は一覧の中で同じものが使い回されるので、実体で覚える。 */
     private static final Map<EmiStack, Optional<AEKey>> KEYS = new IdentityHashMap<>();
     private static final int KEY_CACHE_LIMIT = 16384;
+    private static final BadgeLayout.AmountLabelCache<AEKey> AMOUNT_LABELS =
+            new BadgeLayout.AmountLabelCache<>(KEY_CACHE_LIMIT);
 
     private StockBadges() {
+    }
+
+    public static void init() {
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, event -> resetCaches());
+        Features.registry().onActiveChange(EmiAeFeatures.STOCK, active -> {
+            if (!active) {
+                resetCaches();
+            }
+        });
+    }
+
+    private static void resetCaches() {
+        KEYS.clear();
+        AMOUNT_LABELS.clear();
+        INDEX.clear();
     }
 
     /** {@code EmiScreenManager.ScreenSpace#render} の最後から呼ばれる(mixin)。EMI と同じ並びで品の位置を引く。 */
@@ -70,12 +92,19 @@ public final class StockBadges {
         } else {
             return;
         }
-        Font font = Minecraft.getInstance().font;
+        Minecraft mc = Minecraft.getInstance();
+        Font font = mc.font;
+        boolean largeFonts = AEConfig.instance().isUseLargeFonts();
+        AmountFormat format = largeFonts ? AmountFormat.SLOT_LARGE_FONT : AmountFormat.SLOT;
         GuiGraphics graphics = context.raw();
         PoseStack pose = graphics.pose();
         List<? extends EmiIngredient> stacks = space.getStacks();
         int i = startIndex;
-        // 品の絵より上に描く高さ(z + 200)は、AE2 の StackSizeRenderer が自分で上げる
+        MultiBufferSource.BufferSource buffer = null;
+        Matrix4f mainMatrix = null;
+        Matrix4f smallMatrix = null;
+        boolean blendDisabled = false;
+        // 品の絵より上に描く高さ(z + 200)を行列に乗せ、テキスト描画を 1 バッチにまとめる
         pose.pushPose();
         try {
             outer:
@@ -87,17 +116,41 @@ public final class StockBadges {
                     EmiIngredient ingredient = stacks.get(i++);
                     AEKey key = keyOf(ingredient);
                     StockIndex.Stock stock = key == null ? null : lookup.apply(key);
-                    if (stock == null) {
+                    if (stock == null || (stock.stored() <= 0 && !stock.craftable())) {
                         continue;
+                    }
+                    if (buffer == null) {
+                        Matrix4f base = pose.last().pose();
+                        float mainScale = BadgeLayout.scale(largeFonts);
+                        mainMatrix = new Matrix4f(base)
+                                .translate(0.0f, 0.0f, BadgeLayout.Z_OFFSET)
+                                .scale(mainScale, mainScale, mainScale);
+                        smallMatrix = largeFonts
+                                ? new Matrix4f(base)
+                                        .translate(0.0f, 0.0f, BadgeLayout.Z_OFFSET)
+                                        .scale(BadgeLayout.SCALE_SMALL, BadgeLayout.SCALE_SMALL, BadgeLayout.SCALE_SMALL)
+                                : mainMatrix;
+                        buffer = mc.renderBuffers().bufferSource();
+                        RenderSystem.disableBlend();
+                        blendDisabled = true;
                     }
                     // EMI は品を (cx + 1, cy + 1) に 16 × 16 で描く
                     int x = space.getX(xo, yo) + 1;
                     int y = space.getY(xo, yo) + 1;
-                    drawBadge(graphics, key, font, x, y, stock);
+                    drawBadge(font, buffer, mainMatrix, smallMatrix, largeFonts, format, key, x, y, stock);
                 }
             }
         } finally {
-            pose.popPose();
+            try {
+                if (buffer != null) {
+                    buffer.endBatch();
+                }
+            } finally {
+                if (blendDisabled) {
+                    RenderSystem.enableBlend();
+                }
+                pose.popPose();
+            }
         }
         if (remote) {
             RemoteStock.flush(now);
@@ -106,26 +159,38 @@ public final class StockBadges {
 
     /**
      * AE2 の端末の品の欄と同じ描き方にする({@code MEStorageScreen#renderSlot} と同じ並び。字の大きさ・位置・数の書き方は
-     * AE2 自身の {@link StackSizeRenderer} と {@code formatAmount} で、AE2 の設定「大きな字」にも従う)。
+     * AE2 自身の {@code StackSizeRenderer} と {@code formatAmount} 準拠で、AE2 の設定「大きな字」にも従う)。
      *
      * <ul>
      *   <li>在庫が無くて作れる: 右下に「+」だけ。</li>
      *   <li>在庫が在る: 右下に数。作れるなら、左上に小さな「+」も。</li>
      * </ul>
      */
-    private static void drawBadge(GuiGraphics graphics, AEKey key, Font font, int x, int y, StockIndex.Stock stock) {
-        boolean largeFonts = AEConfig.instance().isUseLargeFonts();
+    private static void drawBadge(Font font, MultiBufferSource.BufferSource buffer, Matrix4f mainMatrix,
+            Matrix4f smallMatrix, boolean largeFonts, AmountFormat format, AEKey key, int x, int y,
+            StockIndex.Stock stock) {
         if (stock.stored() <= 0) {
             if (stock.craftable()) {
-                StackSizeRenderer.renderSizeLabel(graphics, font, x, y, "+");
+                drawBatchText(font, buffer, mainMatrix, x, y, "+", largeFonts);
             }
             return;
         }
-        AmountFormat format = largeFonts ? AmountFormat.SLOT_LARGE_FONT : AmountFormat.SLOT;
-        StackSizeRenderer.renderSizeLabel(graphics, font, x, y, key.formatAmount(stock.stored(), format), largeFonts);
+        String label = AMOUNT_LABELS.getOrFormat(key, stock.stored(), largeFonts,
+                () -> key.formatAmount(stock.stored(), format));
+        drawBatchText(font, buffer, mainMatrix, x, y, label, largeFonts);
         if (stock.craftable()) {
-            StackSizeRenderer.renderSizeLabel(graphics, font, x - 11, y - 11, "+", false);
+            drawBatchText(font, buffer, smallMatrix, x - 11, y - 11, "+", false);
         }
+    }
+
+    private static void drawBatchText(Font font, MultiBufferSource.BufferSource buffer, Matrix4f matrix,
+            float x, float y, String text, boolean largeFonts) {
+        int drawX = BadgeLayout.labelX(x, font.width(text), largeFonts);
+        int drawY = BadgeLayout.labelY(y, largeFonts);
+        font.drawInBatch(text, drawX + 1, drawY + 1, BadgeLayout.COLOR_SHADOW, false, matrix, buffer,
+                Font.DisplayMode.NORMAL, 0, BadgeLayout.FULL_BRIGHT);
+        font.drawInBatch(text, drawX, drawY, BadgeLayout.COLOR_TEXT, false, matrix, buffer,
+                Font.DisplayMode.NORMAL, 0, BadgeLayout.FULL_BRIGHT);
     }
 
     /** 開いている端末の写しで索引を新しくする。端末が開いていなければ索引を空にして false。 */

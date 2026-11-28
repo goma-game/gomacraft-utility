@@ -126,4 +126,17 @@ class InboxStateTest {
         changed.accept(C, 1, data.length, 0, 0, piece(data, 0), 0, false);
         assertEquals(Result.BROKEN, changed.accept(C, 1, data.length, 1, 1, piece(data, 1), 0, false).result());
     }
+
+    @Test
+    void abortUploadMatchesOnlyActiveUpload() {
+        byte[] data = png(ScreenshotRules.CHUNK_BYTES * 2);
+        InboxState state = new InboxState();
+        org.junit.jupiter.api.Assertions.assertFalse(state.abortUpload(A, 1));
+        state.accept(A, 7, data.length, 0, 0, piece(data, 0), 0, false);
+        org.junit.jupiter.api.Assertions.assertFalse(state.abortUpload(A, 999));
+        org.junit.jupiter.api.Assertions.assertFalse(state.abortUpload(B, 7));
+        org.junit.jupiter.api.Assertions.assertTrue(state.abortUpload(A, 7));
+        assertEquals(0, state.inFlight());
+        org.junit.jupiter.api.Assertions.assertFalse(state.abortUpload(A, 7));
+    }
 }

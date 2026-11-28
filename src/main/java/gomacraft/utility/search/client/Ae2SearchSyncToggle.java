@@ -46,6 +46,18 @@ public final class Ae2SearchSyncToggle {
                 event -> Features.guard(SearchFeatures.AE2_SEARCH_SYNC_TOGGLE, () -> onClick(event)));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.Render.Post.class,
                 event -> Features.guard(SearchFeatures.AE2_SEARCH_SYNC_TOGGLE, () -> onRender(event)));
+        Features.registry().onActiveChange(SearchFeatures.AE2_SEARCH_SYNC_TOGGLE, active -> {
+            if (!active) {
+                reset();
+            }
+        });
+    }
+
+    private static void reset() {
+        inverted = false;
+        lastClick = 0;
+        notice = null;
+        noticeUntil = 0;
     }
 
     /** AE2 の同期の設定を反転しているか(mixin が読む)。 */

@@ -23,6 +23,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 /**
@@ -119,6 +120,30 @@ class Ae2SortKeysTest {
                 .getDeclaredMethod("getComparator", SortOrder.class, SortDir.class);
         method.setAccessible(true);
         return (Comparator<AEKey>) method.invoke(null, order, dir);
+    }
+
+    @BeforeEach
+    void clearCache() {
+        Ae2SortKeys.clearCache();
+    }
+
+    @Test
+    void cachedAcrossSortsAndClearedOnReset() throws Exception {
+        AtomicInteger calls = new AtomicInteger();
+        List<GridInventoryEntry> list = entries(11, 200, calls);
+        Comparator<GridInventoryEntry> byKey = Comparator.comparing(GridInventoryEntry::getWhat,
+                Ae2SortKeys.comparator(SortOrder.MOD, SortDir.ASCENDING, ae2(SortOrder.MOD, SortDir.ASCENDING)));
+        list.sort(byKey);
+        int afterFirst = calls.get();
+        assertTrue(afterFirst <= list.size());
+
+        list.sort(Comparator.comparing(GridInventoryEntry::getWhat,
+                Ae2SortKeys.comparator(SortOrder.MOD, SortDir.DESCENDING, ae2(SortOrder.MOD, SortDir.DESCENDING))));
+        assertEquals(afterFirst, calls.get(), "2 回目の並べ直しは持続キャッシュを使う");
+
+        Ae2SortKeys.clearCache();
+        list.sort(byKey);
+        assertTrue(calls.get() > afterFirst, "clearCache 後は再計算する");
     }
 
     @Test

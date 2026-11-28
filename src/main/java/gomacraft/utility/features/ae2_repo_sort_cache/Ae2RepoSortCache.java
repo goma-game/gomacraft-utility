@@ -1,6 +1,7 @@
 package gomacraft.utility.features.ae2_repo_sort_cache;
 
 import gomacraft.utility.feature.Feature;
+import gomacraft.utility.feature.FeatureContext;
 import gomacraft.utility.feature.Requirement;
 import java.util.List;
 
@@ -25,6 +26,11 @@ public final class Ae2RepoSortCache implements Feature {
     @Override
     public String id() {
         return ID;
+    }
+
+    @Override
+    public void init(FeatureContext context) {
+        gomacraft.utility.features.ae2_repo_sort_cache.client.Ae2SortKeys.init();
     }
 
     @Override

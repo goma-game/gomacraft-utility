@@ -44,6 +44,11 @@ public final class FocusRecorder {
         focused = false;
     }
 
+    /** 機能無効化などで監視状態を初期化する。 */
+    public void reset() {
+        focused = false;
+    }
+
     /**
      * 画面を閉じたときに渡す。記す語を返す(無ければ null)。
      *

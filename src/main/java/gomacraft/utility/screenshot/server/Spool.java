@@ -63,7 +63,20 @@ public final class Spool {
 
     private static void place(Path dir, String name, byte[] content) throws IOException {
         Path tmp = dir.resolve("." + name + ".tmp");
-        Files.write(tmp, content);
-        Files.move(tmp, dir.resolve(name), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        try {
+            Files.write(tmp, content);
+            Path target = dir.resolve(name);
+            try {
+                Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            try {
+                Files.deleteIfExists(tmp);
+            } catch (IOException ignored) {
+                // 元例外の送出を妨げない
+            }
+        }
     }
 }

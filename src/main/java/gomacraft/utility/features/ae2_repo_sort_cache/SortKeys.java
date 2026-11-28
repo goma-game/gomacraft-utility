@@ -36,13 +36,24 @@ public final class SortKeys {
     public static <K> Comparator<K> comparator(
             boolean byMod, boolean ascending, Function<? super K, String> modId, Function<? super K, String> name) {
         Map<K, String> names = new IdentityHashMap<>();
-        Comparator<K> byName = Comparator.comparing(key -> names.computeIfAbsent(key, name), String::compareToIgnoreCase);
-        Comparator<K> order = byName;
+        Function<? super K, String> cachedName = key -> names.computeIfAbsent(key, name);
+        Function<? super K, String> cachedMod = modId;
         if (byMod) {
             Map<K, String> mods = new IdentityHashMap<>();
-            order = Comparator.<K, String>comparing(key -> mods.computeIfAbsent(key, modId), String::compareToIgnoreCase)
-                    .thenComparing(byName);
+            cachedMod = key -> mods.computeIfAbsent(key, modId);
         }
+        return order(byMod, ascending, cachedMod, cachedName);
+    }
+
+    /**
+     * 受け取った抽出器で直接比較する {@link Comparator} を組む(持続キャッシュを持つ呼び手用)。
+     */
+    public static <K> Comparator<K> order(
+            boolean byMod, boolean ascending, Function<? super K, String> modId, Function<? super K, String> name) {
+        Comparator<K> byName = Comparator.comparing(name, String::compareToIgnoreCase);
+        Comparator<K> order = byMod
+                ? Comparator.<K, String>comparing(modId, String::compareToIgnoreCase).thenComparing(byName)
+                : byName;
         return ascending ? order : order.reversed();
     }
 }

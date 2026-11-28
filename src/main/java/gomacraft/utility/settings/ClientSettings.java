@@ -3,8 +3,10 @@ package gomacraft.utility.settings;
 import gomacraft.utility.feature.TomlLines;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -293,7 +295,21 @@ public final class ClientSettings {
         }
         String text = render();
         Files.createDirectories(file.getParent());
-        Files.writeString(file, text, StandardCharsets.UTF_8);
+        Path temp = file.resolveSibling(file.getFileName() + ".tmp");
+        try {
+            Files.writeString(temp, text, StandardCharsets.UTF_8);
+            try {
+                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
+        } finally {
+            try {
+                Files.deleteIfExists(temp);
+            } catch (IOException ignored) {
+                // 元例外の送出を妨げない
+            }
+        }
         original = text;
         fire();
     }
