@@ -62,7 +62,8 @@ class SettingsLangTest {
         Set<String> jaKeys = new TreeSet<>(ja.keySet());
         assertEquals(enKeys, jaKeys, "en_us と ja_jp の翻訳キーが一致しない");
 
-        Pattern placeholderPattern = Pattern.compile("(?<!%)%(?:\\d+\\$)?[sd](?![a-zA-Z])");
+        Pattern placeholderPattern = Pattern.compile(
+                "%%|(%(?:\\d+\\$)?[-#+ 0,(]*\\d*(?:\\.\\d+)?[bBhHsScCdoxXeEfgGaAtT])(?![a-zA-Z])");
         List<String> mismatch = new ArrayList<>();
         for (String key : enKeys) {
             List<String> enPh = placeholders(placeholderPattern, en.get(key).getAsString());
@@ -78,7 +79,9 @@ class SettingsLangTest {
         List<String> found = new ArrayList<>();
         Matcher matcher = pattern.matcher(text);
         while (matcher.find()) {
-            found.add(matcher.group());
+            if (matcher.group(1) != null) {
+                found.add(matcher.group(1));
+            }
         }
         Collections.sort(found);
         return found;
