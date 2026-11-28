@@ -67,6 +67,8 @@ public final class Features {
         features.add(new gomacraft.utility.features.ae2_repo_update_batch.Ae2RepoUpdateBatch());
         // 段 4(スクショの Discord への投稿): goma-org/gomabase#2295
         features.addAll(ScreenshotFeatures.all());
+        // チャットの Discord の画像をゲームの中で見る・チャットの URL をリンクにする(goma-game/gomacraft-utility#47)
+        features.addAll(gomacraft.utility.chatimage.ChatImageFeatures.all());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);

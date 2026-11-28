@@ -113,5 +113,17 @@
   "gomacraft_utility.settings.emi_ae_quick_craft.alt_click.tooltip": "EMI のアイテムを Alt+クリックで取り出し、在庫がなければクラフトします。Alt+Shift+クリックで 1 スタック分クラフトします。",
   "gomacraft_utility.feature.emi_search_history": "EMI",
   "gomacraft_utility.feature.emi_search_history.tooltip": "EMI の検索欄の左側に検索履歴を表示します。履歴は AE2 ターミナルと共有されます。",
-  "gomacraft_utility.search_sync.on": "EMI と同期"
+  "gomacraft_utility.search_sync.on": "EMI と同期",
+  "gomacraft_utility.settings.tab.chat": "チャット",
+  "gomacraft_utility.feature.chat_image_viewer": "画像の表示",
+  "gomacraft_utility.feature.chat_image_viewer.tooltip": "チャットの Discord の画像のリンクにマウスを乗せると小さく表示し、クリックするとゲーム内で表示します。",
+  "gomacraft_utility.feature.chat_link": "URL のリンク",
+  "gomacraft_utility.feature.chat_link.tooltip": "チャットの http/https の URL をクリックできるようにします。",
+  "gomacraft_utility.chat_image.title": "画像",
+  "gomacraft_utility.chat_image.loading": "読み込み中…",
+  "gomacraft_utility.chat_image.expired": "この画像のリンクは期限切れです。",
+  "gomacraft_utility.chat_image.too_large": "画像が大きすぎて表示できません。",
+  "gomacraft_utility.chat_image.failed": "画像を読み込めませんでした。",
+  "gomacraft_utility.chat_image.open_browser": "ブラウザで開く",
+  "gomacraft_utility.chat_image.close": "閉じる"
 }
