@@ -45,6 +45,8 @@ public final class Features {
         List<Feature> features = new ArrayList<>();
         // スクショの Discord への投稿(forge 版の段 4 —— goma-org/gomabase#2295)
         features.addAll(ScreenshotFeatures.all());
+        // チャットの Discord の画像の表示と、URL のリンク(forge 版の goma-game/gomacraft-utility#47)
+        features.addAll(gomacraft.utility.chatimage.ChatImageFeatures.all());
         if (selftest) {
             for (String id : SELFTEST_FEATURES) {
                 features.add(() -> id);

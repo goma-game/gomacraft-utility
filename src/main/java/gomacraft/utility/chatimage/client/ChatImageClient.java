@@ -34,9 +34,20 @@ public final class ChatImageClient {
     public static void init() {
         // 止めたら作り置きの絵を全部放す(止めている間は描かないので、残すと GPU の記憶を持ったままになる)
         Features.registry().onActiveChange(ChatImageFeatures.VIEWER, active -> ChatImageCache.clear());
-        // 抜けたら作り置きを捨てる(次のサーバでは使わない。途中の取りにいきも取り消す)
-        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class,
-                event -> Features.guard(ChatImageFeatures.VIEWER, ChatImageCache::clear));
+        // 抜けたら作り置きを捨てる(次のサーバでは使わない。途中の取りにいきも取り消す)。⚠ guard の外で呼ぶ: 機能が
+        // FAILED になった後も、それまでに作った絵と取りにいきは残っている(markFailed は onActiveChange を呼ばない)。
+        // この listener は機能を初期化したときだけ足すので、問わずに捨てる(作り置きが空なら何もしない)
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class, event -> releaseAll());
+    }
+
+    /** 作り置きを全部捨てる(機能の状態を問わない)。失敗はログに残し、抜ける処理を止めない。 */
+    static void releaseAll() {
+        try {
+            ChatImageCache.clear();
+        } catch (Throwable t) {
+            org.slf4j.LoggerFactory.getLogger(gomacraft.utility.GomacraftUtility.MOD_ID)
+                    .warn("gomacraft_utility: 画像の作り置きを捨てられない: {}", t.toString());
+        }
     }
 
     /** 押した部品が Discord の画像なら、その形。 */

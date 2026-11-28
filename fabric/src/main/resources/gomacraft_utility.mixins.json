@@ -11,7 +11,10 @@
   ],
   "client": [
     "screenshot_share.ScreenshotMixin",
-    "screenshot_share.ConnectionAccessor"
+    "screenshot_share.ConnectionAccessor",
+    "chat_image_viewer.ChatScreenClickMixin",
+    "chat_image_viewer.ChatScreenPreviewMixin",
+    "chat_link.ChatComponentLinkMixin"
   ],
   "server": []
 }

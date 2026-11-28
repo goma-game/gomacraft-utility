@@ -52,6 +52,10 @@ class DiscordImageUrlTest {
                 "https://cdn.discordapp.com/attachments/1/2/a.png/",
                 "https://cdn.discordapp.com/attachments/1/2/a",
                 "https://cdn.discordapp.com/attachments/../../evil/a.png",
+                // 符号にした上の段への区切り・逆斜線も断る(復号した path で見る)
+                "https://cdn.discordapp.com/attachments/%2e%2e/%2E%2e/evil/a.png",
+                "https://cdn.discordapp.com/attachments/1/%2e/a.png",
+                "https://cdn.discordapp.com/attachments/1%5c..%5cevil/a.png",
                 "https://cdn.discordapp.com/attachments/1/2/a.svg",
                 "file:///attachments/1/2/a.png",
                 "https:cdn.discordapp.com/attachments/1/2/a.png",

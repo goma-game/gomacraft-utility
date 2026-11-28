@@ -37,5 +37,16 @@
   "gomacraft_utility.screenshot.result.spool_full": "Too many screenshots are waiting to be posted. Try again later.",
   "gomacraft_utility.screenshot.result.broken": "The screenshot was not received completely. Wait a moment and try again.",
   "gomacraft_utility.screenshot.result.error": "The server could not save the screenshot.",
-  "gomacraft_utility.settings.save_failed": "Could not save the settings"
+  "gomacraft_utility.settings.save_failed": "Could not save the settings",
+  "gomacraft_utility.feature.chat_image_viewer": "Image viewer",
+  "gomacraft_utility.feature.chat_image_viewer.tooltip": "Hover a Discord image link in chat to preview it. Click to view it in game.",
+  "gomacraft_utility.feature.chat_link": "Chat links",
+  "gomacraft_utility.feature.chat_link.tooltip": "Makes http/https URLs in chat clickable.",
+  "gomacraft_utility.chat_image.title": "Image",
+  "gomacraft_utility.chat_image.loading": "Loading...",
+  "gomacraft_utility.chat_image.expired": "This image link has expired.",
+  "gomacraft_utility.chat_image.too_large": "This image is too large to show.",
+  "gomacraft_utility.chat_image.failed": "Could not load the image.",
+  "gomacraft_utility.chat_image.open_browser": "Open in browser",
+  "gomacraft_utility.chat_image.close": "Close"
 }

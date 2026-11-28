@@ -22,6 +22,8 @@ set -eu
 
 # forge 版(../src)と同じ中身のはずのファイル(src/ からの相対パス)
 COPIES='
+main/java/gomacraft/utility/chatimage/ChatLinks.java
+main/java/gomacraft/utility/chatimage/DiscordImageUrl.java
 main/java/gomacraft/utility/feature/Feature.java
 main/java/gomacraft/utility/feature/FeatureConfig.java
 main/java/gomacraft/utility/feature/FeatureState.java
@@ -40,6 +42,8 @@ main/java/gomacraft/utility/settings/ClientSettings.java
 main/java/gomacraft/utility/settings/Settings.java
 test/java/gomacraft/utility/MixinContractTest.java
 test/java/gomacraft/utility/StatusLineContractTest.java
+test/java/gomacraft/utility/chatimage/ChatLinksTest.java
+test/java/gomacraft/utility/chatimage/DiscordImageUrlTest.java
 test/java/gomacraft/utility/feature/FeatureConfigTest.java
 test/java/gomacraft/utility/feature/FeatureConfigUpdateTest.java
 test/java/gomacraft/utility/screenshot/ScreenshotRulesTest.java
