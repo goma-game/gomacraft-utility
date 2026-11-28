@@ -372,7 +372,7 @@ public final class ShareClient {
             case TOO_LARGE -> "The screenshot is too large to post.";
             case BAD_IMAGE -> "The server could not read the screenshot.";
             case SPOOL_FULL -> "Too many screenshots are waiting to be posted. Try again later.";
-            case BROKEN -> "The screenshot was not received completely. Try again.";
+            case BROKEN -> "The screenshot was not received completely. Wait a moment and try again.";
             case ERROR -> "The server could not save the screenshot.";
         };
     }
