@@ -37,5 +37,16 @@
   "gomacraft_utility.screenshot.result.spool_full": "投稿待ちのスクリーンショットが上限に達しています。しばらく待ってからもう一度お試しください。",
   "gomacraft_utility.screenshot.result.broken": "スクリーンショットを最後まで受信できませんでした。少し待ってからもう一度お試しください。",
   "gomacraft_utility.screenshot.result.error": "サーバー側でスクリーンショットを保存できませんでした。",
-  "gomacraft_utility.settings.save_failed": "設定を保存できませんでした"
+  "gomacraft_utility.settings.save_failed": "設定を保存できませんでした",
+  "gomacraft_utility.feature.chat_image_viewer": "画像の表示",
+  "gomacraft_utility.feature.chat_image_viewer.tooltip": "チャットの Discord の画像のリンクにマウスを乗せると小さく表示し、クリックするとゲーム内で表示します。",
+  "gomacraft_utility.feature.chat_link": "URL のリンク",
+  "gomacraft_utility.feature.chat_link.tooltip": "チャットの http/https の URL をクリックできるようにします。",
+  "gomacraft_utility.chat_image.title": "画像",
+  "gomacraft_utility.chat_image.loading": "読み込み中…",
+  "gomacraft_utility.chat_image.expired": "この画像のリンクは期限切れです。",
+  "gomacraft_utility.chat_image.too_large": "画像が大きすぎて表示できません。",
+  "gomacraft_utility.chat_image.failed": "画像を読み込めませんでした。",
+  "gomacraft_utility.chat_image.open_browser": "ブラウザで開く",
+  "gomacraft_utility.chat_image.close": "閉じる"
 }
