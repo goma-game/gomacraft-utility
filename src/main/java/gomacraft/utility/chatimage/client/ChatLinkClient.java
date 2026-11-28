@@ -49,7 +49,9 @@ public final class ChatLinkClient {
         MutableComponent out = Component.empty();
         boolean[] changed = {false};
         message.<Object>visit((style, text) -> {
-            List<ChatLinks.Span> spans = style.getClickEvent() == null ? ChatLinks.find(text) : List.of();
+            // ⚠ § の書式の符号を含む部品は分けない(分けると、符号より後ろの色と書式が消える)
+            List<ChatLinks.Span> spans = style.getClickEvent() == null && text.indexOf('§') < 0
+                    ? ChatLinks.find(text) : List.of();
             if (spans.isEmpty()) {
                 out.append(Component.literal(text).withStyle(style));
                 return Optional.empty();

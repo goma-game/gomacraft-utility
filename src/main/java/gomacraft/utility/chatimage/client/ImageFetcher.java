@@ -20,6 +20,7 @@ import javax.imageio.ImageIO;
 import javax.imageio.ImageReadParam;
 import javax.imageio.ImageReader;
 import javax.imageio.stream.ImageInputStream;
+import javax.imageio.stream.MemoryCacheImageInputStream;
 
 /**
  * 画像を取りにいって、絵(NativeImage)にする。主スレッドの外(専用の 2 本のスレッド)で呼ぶ。
@@ -35,6 +36,8 @@ import javax.imageio.stream.ImageInputStream;
 final class ImageFetcher {
     /** 受け取る大きさの上限。 */
     static final int MAX_BYTES = 16 * 1024 * 1024;
+    /** 読む形(ImageIO の読み手の名前。webp は Discord の側で PNG に変えてもらう)。 */
+    private static final java.util.Set<String> FORMATS = java.util.Set.of("png", "jpeg", "jpg", "gif");
     /** 元の絵の幅・高さの上限(これより大きいものは読まない)。 */
     static final int MAX_SOURCE_SIDE = 16384;
     static final long MAX_SOURCE_PIXELS = 60_000_000L;
@@ -76,11 +79,15 @@ final class ImageFetcher {
         if (url.expiredAt(System.currentTimeMillis() / 1000)) {
             throw new FetchException(Failure.EXPIRED, "ex passed");
         }
-        byte[] data = download(url.fetchUri());
+        byte[] data = download(url);
+        if (Thread.currentThread().isInterrupted()) {
+            throw new FetchException(Failure.FAILED, "cancelled");
+        }
         return decode(data);
     }
 
-    private static byte[] download(URI uri) throws FetchException {
+    private static byte[] download(DiscordImageUrl url) throws FetchException {
+        URI uri = url.fetchUri();
         // ⚠ 取りにいく先は DiscordImageUrl が組んだものだけ(ここでも置き場を確かめ直す)
         if (!"https".equals(uri.getScheme()) || !"media.discordapp.net".equals(uri.getHost())) {
             throw new FetchException(Failure.FAILED, "refused host");
@@ -102,7 +109,9 @@ final class ImageFetcher {
         }
         try (InputStream body = response.body()) {
             int status = response.statusCode();
-            if (status == 404 || status == 403 || status == 410) {
+            // 403 は、期限(ex)を過ぎているときだけ失効と見る(ほかの 403 は失敗)
+            if (status == 404 || status == 410
+                    || (status == 403 && url.expiredAt(System.currentTimeMillis() / 1000))) {
                 throw new FetchException(Failure.EXPIRED, "status " + status);
             }
             if (status != 200) {
@@ -148,15 +157,23 @@ final class ImageFetcher {
     }
 
     private static NativeImage decode(byte[] data) throws FetchException {
-        try (ImageInputStream stream = ImageIO.createImageInputStream(new ByteArrayInputStream(data))) {
-            if (stream == null) {
-                throw new FetchException(Failure.FAILED, "no image stream");
-            }
+        // 手元の記憶の上で読む(ImageIO の既定は、場合によって一時ファイルへ書き出す)
+        try (ImageInputStream stream = new MemoryCacheImageInputStream(new ByteArrayInputStream(data))) {
+            ImageReader reader = null;
             Iterator<ImageReader> readers = ImageIO.getImageReaders(stream);
-            if (!readers.hasNext()) {
-                throw new FetchException(Failure.FAILED, "unknown image format");
+            while (readers.hasNext()) {
+                ImageReader candidate = readers.next();
+                // ⚠ 読み手は png・jpeg・gif に限る(名前が .png の TIFF・BMP などを読ませない)
+                String format = candidate.getFormatName().toLowerCase(java.util.Locale.ROOT);
+                if (reader == null && FORMATS.contains(format)) {
+                    reader = candidate;
+                } else {
+                    candidate.dispose();
+                }
             }
-            ImageReader reader = readers.next();
+            if (reader == null) {
+                throw new FetchException(Failure.FAILED, "unsupported image format");
+            }
             try {
                 reader.setInput(stream, true, true);
                 // ⚠ 読む前に頭の大きさを見る(小さなファイルでも、広げると大きな絵になりうる)
@@ -167,7 +184,8 @@ final class ImageFetcher {
                     throw new FetchException(Failure.TOO_LARGE, width + "x" + height);
                 }
                 int step = 1;
-                while (Math.max(width, height) / step > MAX_SIDE) {
+                // 間引いた後の辺は切り上げ(4097 を 2 で間引くと 2049)
+                while ((Math.max(width, height) + step - 1) / step > MAX_SIDE) {
                     step++;
                 }
                 ImageReadParam param = reader.getDefaultReadParam();

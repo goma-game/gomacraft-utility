@@ -13,6 +13,8 @@ import net.minecraft.client.gui.screens.inventory.tooltip.TooltipRenderUtil;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
+import net.neoforged.neoforge.client.event.ClientPlayerNetworkEvent;
+import net.neoforged.neoforge.common.NeoForge;
 
 /**
  * 機能 {@code chat_image_viewer} のクライアントの中身(mixin から呼ぶ)。
@@ -32,6 +34,9 @@ public final class ChatImageClient {
     public static void init() {
         // 止めたら作り置きの絵を全部放す(止めている間は描かないので、残すと GPU の記憶を持ったままになる)
         Features.registry().onActiveChange(ChatImageFeatures.VIEWER, active -> ChatImageCache.clear());
+        // 抜けたら作り置きを捨てる(次のサーバでは使わない。途中の取りにいきも取り消す)
+        NeoForge.EVENT_BUS.addListener(ClientPlayerNetworkEvent.LoggingOut.class,
+                event -> Features.guard(ChatImageFeatures.VIEWER, ChatImageCache::clear));
     }
 
     /** 押した部品が Discord の画像なら、その形。 */
