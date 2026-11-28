@@ -1,6 +1,9 @@
 package gomacraft.utility.chatimage.client;
 
 import com.mojang.blaze3d.platform.NativeImage;
+import com.mojang.blaze3d.systems.RenderSystem;
+import com.mojang.blaze3d.textures.AddressMode;
+import com.mojang.blaze3d.textures.FilterMode;
 import gomacraft.utility.GomacraftUtility;
 import gomacraft.utility.chatimage.DiscordImageUrl;
 import java.util.Iterator;
@@ -23,9 +26,22 @@ import net.minecraft.resources.Identifier;
  * 取り消す({@code Future.cancel})。取り消しの後に届いた絵は、{@link #finish} で閉じる。
  *
  * <p>fabric 版: forge 版の同じ名前のクラスから写した。違うのは 26.x の部品の形だけ(名前の型が {@code Identifier}、
- * {@code DynamicTexture} は名札を取り、絵の補間は描くときの sampler が決めるので {@code setFilter} が無い)。
+ * {@code DynamicTexture} は名札を取る)。26.x の {@code DynamicTexture} には {@code setFilter} が無く、補間は絵が持つ
+ * sampler が決める。既定は近い点を取る形(NEAREST)で、縮めた絵がぎざぎざになるので、{@link LinearTexture} で
+ * 線形(LINEAR)の sampler に差し替える(forge 版の {@code setFilter(true, false)} の対 —— 26.2 の実物で確かめた:
+ * {@code DynamicTexture} は作るときに {@code SamplerCache.getRepeat(NEAREST)} を入れ、描く側は {@code getSampler()} を読む)。
  */
 final class ChatImageCache {
+    /** 線形に補間する(縁は伸ばす・mipmap は使わない)DynamicTexture。 */
+    private static final class LinearTexture extends DynamicTexture {
+        LinearTexture(NativeImage image) {
+            super(() -> GomacraftUtility.MOD_ID + " chat image", image);
+            this.sampler = RenderSystem.getSamplerCache()
+                    .getSampler(AddressMode.CLAMP_TO_EDGE, AddressMode.CLAMP_TO_EDGE, FilterMode.LINEAR, FilterMode.LINEAR,
+                            false);
+        }
+    }
+
     /**
      * 覚えておく数(絵は長い辺 2048 まで。1 枚で GPU に約 16 MB、DynamicTexture が点を手元にも持つので合わせて約
      * 32 MB × この数)。
@@ -135,7 +151,7 @@ final class ChatImageCache {
         }
         DynamicTexture texture;
         try {
-            texture = new DynamicTexture(() -> GomacraftUtility.MOD_ID + " chat image", image);
+            texture = new LinearTexture(image);
         } catch (RuntimeException e) {
             image.close();
             fail(entry);

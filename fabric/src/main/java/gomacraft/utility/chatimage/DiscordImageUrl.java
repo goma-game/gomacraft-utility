@@ -61,11 +61,20 @@ public final class DiscordImageUrl {
             return Optional.empty();
         }
         String rawPath = uri.getRawPath();
-        if (rawPath == null || !rawPath.startsWith("/attachments/") || rawPath.contains("/../")
-                || rawPath.contains("\\")) {
+        if (rawPath == null || !rawPath.startsWith("/attachments/")) {
             return Optional.empty();
         }
+        // ⚠ 上の段へ上がる区切りは、復号した path で断る(字面の /../ だけを見ると %2e%2e が通る)。
+        // 逆斜線も復号してから見る(%5c)
         String path = uri.getPath();
+        if (path == null || path.contains("\\")) {
+            return Optional.empty();
+        }
+        for (String segment : path.split("/", -1)) {
+            if (segment.equals("..") || segment.equals(".")) {
+                return Optional.empty();
+            }
+        }
         int dot = path.lastIndexOf('.');
         if (dot < 0 || path.lastIndexOf('/') > dot) {
             return Optional.empty();
