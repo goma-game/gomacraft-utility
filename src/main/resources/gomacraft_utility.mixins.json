@@ -35,7 +35,9 @@
     "ttf_glyph_lock.NativeImageFontLockMixin",
     "ae2_repo_sort_cache.RepoSortCacheMixin",
     "ae2_repo_update_batch.RepoUpdateBatchMixin",
-    "soak_hold.McRuntimeTestHoldMixin"
+    "soak_hold.McRuntimeTestHoldMixin",
+    "chat_image_viewer.ScreenClickMixin",
+    "chat_image_viewer.ChatScreenPreviewMixin"
   ],
   "server": [
     "mekagun_server.ItemMekaGunMixin",

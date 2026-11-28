@@ -113,5 +113,17 @@
   "gomacraft_utility.settings.emi_ae_quick_craft.alt_click.tooltip": "Alt + click an EMI item to take it (or craft it if missing). Alt + Shift + click crafts a stack.",
   "gomacraft_utility.feature.emi_search_history": "EMI",
   "gomacraft_utility.feature.emi_search_history.tooltip": "Shows the search history left of the EMI search box. It is shared with the AE2 terminal.",
-  "gomacraft_utility.search_sync.on": "Synced with EMI"
+  "gomacraft_utility.search_sync.on": "Synced with EMI",
+  "gomacraft_utility.settings.tab.chat": "Chat",
+  "gomacraft_utility.feature.chat_image_viewer": "Image viewer",
+  "gomacraft_utility.feature.chat_image_viewer.tooltip": "Hover a Discord image link in chat to preview it. Click to view it in game.",
+  "gomacraft_utility.feature.chat_link": "Chat links",
+  "gomacraft_utility.feature.chat_link.tooltip": "Makes http/https URLs in chat clickable.",
+  "gomacraft_utility.chat_image.title": "Image",
+  "gomacraft_utility.chat_image.loading": "Loading...",
+  "gomacraft_utility.chat_image.expired": "This image link has expired.",
+  "gomacraft_utility.chat_image.too_large": "This image is too large to show.",
+  "gomacraft_utility.chat_image.failed": "Could not load the image.",
+  "gomacraft_utility.chat_image.open_browser": "Open in browser",
+  "gomacraft_utility.chat_image.close": "Close"
 }

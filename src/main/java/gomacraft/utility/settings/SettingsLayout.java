@@ -1,5 +1,6 @@
 package gomacraft.utility.settings;
 
+import gomacraft.utility.chatimage.ChatImageFeatures;
 import gomacraft.utility.emiae.EmiAeFeatures;
 import gomacraft.utility.emiae.QuickCraftSettings;
 import gomacraft.utility.features.ae2_repo_sort_cache.Ae2RepoSortCache;
@@ -29,6 +30,7 @@ public final class SettingsLayout {
     public static final String SEARCH = "search";
     public static final String AE2_EMI = "ae2_emi";
     public static final String SCREENSHOT = "screenshot";
+    public static final String CHAT = "chat";
     public static final String TEXT = "text";
     public static final String DEV = "dev";
     public static final String OTHER = "other";
@@ -148,6 +150,9 @@ public final class SettingsLayout {
                         feature(ScreenshotFeatures.SHARE,
                                 setting(ShareSettings.DEFAULT_TARGET),
                                 setting(ShareSettings.CHOOSER_MODIFIER)))),
+                new Tab(CHAT, List.of(
+                        feature(ChatImageFeatures.VIEWER),
+                        feature(ChatImageFeatures.LINK))),
                 new Tab(TEXT, List.of(
                         feature(SearchFeatures.MCJTYLIB_TEXT))),
                 // 遊ぶ人が触らなくてよいもの: 重さと不具合の直し(困ったときに切るためのもの)
