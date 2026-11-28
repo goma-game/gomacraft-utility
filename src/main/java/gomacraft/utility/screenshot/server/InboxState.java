@@ -136,6 +136,16 @@ public final class InboxState {
         uploads.remove(player);
     }
 
+    /** 送信途中で機能が止まったときに一致するアップロードだけを捨て、応答対象なら true を返す。 */
+    public boolean abortUpload(UUID player, int upload) {
+        Upload current = uploads.get(player);
+        if (current != null && current.id == upload) {
+            uploads.remove(player);
+            return true;
+        }
+        return false;
+    }
+
     int inFlight() {
         return uploads.size() + writing;
     }

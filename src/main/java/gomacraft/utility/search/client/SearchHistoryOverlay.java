@@ -247,6 +247,25 @@ public final class SearchHistoryOverlay {
         NeoForge.EVENT_BUS.addListener(ScreenEvent.MouseScrolled.Pre.class, event -> guard(() -> onScroll(event)));
         NeoForge.EVENT_BUS.addListener(ScreenEvent.Closing.class, event -> guard(() -> onClose(event.getScreen())));
         NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, event -> guard(this::watchFocus));
+        Features.registry().onActiveChange(feature, active -> {
+            if (!active) {
+                resetTransientState();
+            }
+        });
+    }
+
+    private void resetTransientState() {
+        shown = null;
+        shownField = null;
+        shownScreen = null;
+        expanded = false;
+        selected = -1;
+        scroll = 0;
+        lastValue = "";
+        marqueeText = null;
+        marqueeStart = 0;
+        swallowRelease = false;
+        recorder.reset();
     }
 
     /** 欄の focus が外れたら、その語を記す(Enter・欄の外を押す・Tab など、どの道で外れても —— {@link FocusRecorder})。 */

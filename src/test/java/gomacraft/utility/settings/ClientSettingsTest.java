@@ -183,4 +183,19 @@ class ClientSettingsTest {
         assertEquals("chat", s.get(TARGET));
         assertEquals(0, fired.get(), "保存失敗時は変更通知を出さない");
     }
+
+    @Test
+    void saveUsesTempAndCleansUpOnMoveFailure(@TempDir Path dir) throws Exception {
+        ClientSettings s = settings();
+        s.load(dir, w -> { });
+        Path file = dir.resolve(ClientSettings.FILE_NAME);
+        Path temp = dir.resolve(ClientSettings.FILE_NAME + ".tmp");
+        assertFalse(Files.exists(temp), "正常保存後に .tmp を残さない");
+
+        // 同名ディレクトリへ置き換えて move を失敗させても .tmp が掃除される
+        Files.delete(file);
+        Files.createDirectory(file);
+        assertThrows(IOException.class, s::save);
+        assertFalse(Files.exists(temp), "保存失敗後も .tmp を残さない");
+    }
 }

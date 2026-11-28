@@ -45,7 +45,7 @@ public final class EmiAeFeatures {
         // ⚠ init はラムダの中で呼ぶ(メソッド参照 QuickCraft::init にしない)。メソッド参照は一覧を作る時点で
         // クラスを引くので、専用サーバでも画面のクラス(KeyMapping など)を読み込んでしまう
         return List.of(
-                feature(STOCK, AE2_AND_EMI, true, bus -> { }),
+                feature(STOCK, AE2_AND_EMI, true, bus -> gomacraft.utility.emiae.client.StockBadges.init()),
                 feature(CRAFT_CONFIRM, AE2_AND_EMI, true, bus -> { }),
                 feature(QUICK_CRAFT, AE2_AND_EMI, true, bus -> gomacraft.utility.emiae.client.QuickCraft.init(bus)),
                 feature(GRID_CRAFT, AE2_AND_EMI, true, bus -> gomacraft.utility.emiae.client.GridCraft.init(bus)),

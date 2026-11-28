@@ -3,6 +3,7 @@ package gomacraft.utility.screenshot.server;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.gson.JsonObject;
@@ -55,5 +56,21 @@ class SpoolTest {
                     "p", UUID.randomUUID(), Instant.now(), i);
         }
         assertTrue(Spool.full(dir));
+    }
+
+    @Test
+    void cleansTempFileWhenMoveFails() throws IOException {
+        Path dir = Spool.dir(game);
+        Files.createDirectories(dir);
+        byte[] image = InboxStateTest.png(100);
+        UUID id = UUID.fromString("0123abcd-0000-0000-0000-000000000000");
+        Instant now = Instant.parse("2026-11-22T01:02:03Z");
+        String stem = ScreenshotRules.stem(now, id, 1);
+        // 移動先に同名ディレクトリを置いて move を失敗させる
+        Files.createDirectory(dir.resolve(stem + ".png"));
+
+        assertThrows(IOException.class, () -> Spool.write(
+                dir, image, ScreenshotRules.Format.PNG, ScreenshotRules.Target.BOTH, "p", id, now, 1));
+        assertFalse(Files.exists(dir.resolve("." + stem + ".png.tmp")), "失敗時に .tmp を残さない");
     }
 }

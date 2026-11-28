@@ -46,6 +46,12 @@ class FocusRecorderTest {
             r.observe(true, true, "tin");
             assertNull(r.observe(false, false, ""), who + "欄の無い画面では記さない");
             assertNull(r.observe(true, false, "tin"), who + "戻ってきても、前の focus では記さない");
+
+            // reset() 後は直前の focus を持ち越さない
+            r = new FocusRecorder();
+            r.observe(true, true, "silver");
+            r.reset();
+            assertNull(r.observe(true, false, "silver"), who + "reset 後は前の focus を持ち越さない");
         }
     }
 }

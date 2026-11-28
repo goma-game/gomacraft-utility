@@ -69,7 +69,7 @@ public final class ServerInbox {
         }
         FeatureRegistry registry = Features.registry();
         if (!registry.isOn(ScreenshotFeatures.INBOX)) {
-            if (chunk.index() == 0) {
+            if (chunk.index() == 0 || STATE.abortUpload(player.getUUID(), chunk.upload())) {
                 reply(player, chunk.upload(), Result.OFF);
             }
             return;

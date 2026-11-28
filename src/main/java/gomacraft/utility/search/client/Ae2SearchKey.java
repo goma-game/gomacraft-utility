@@ -74,7 +74,18 @@ public final class Ae2SearchKey {
             return false;
         }
         KeyModifier modifier = mapping.getKeyModifier();
-        return modifier == KeyModifier.NONE || modifier.isActive(KeyConflictContext.GUI);
+        return matchesModifier(modifier, event.getModifiers(), modifier.isActive(KeyConflictContext.GUI));
+    }
+
+    /**
+     * 修飾キーの一致判定。修飾キー「なし」の割り当てでは、{@code @modId} 検索用の Alt と無修飾のみを許可し、
+     * Ctrl+F(EMI 検索欄フォーカス)・Shift+F・Super+F を横取りしない。
+     */
+    static boolean matchesModifier(KeyModifier binding, int pressedModifiers, boolean bindingActive) {
+        if (binding == KeyModifier.NONE) {
+            return (pressedModifiers & (GLFW.GLFW_MOD_CONTROL | GLFW.GLFW_MOD_SHIFT | GLFW.GLFW_MOD_SUPER)) == 0;
+        }
+        return bindingActive;
     }
 
     private static void onKey(ScreenEvent.KeyPressed.Pre event) {
