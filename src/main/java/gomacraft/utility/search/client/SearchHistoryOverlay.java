@@ -10,6 +10,7 @@ import gomacraft.utility.search.SearchHistoryStore;
 import gomacraft.utility.settings.Settings;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.function.Predicate;
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
@@ -95,8 +96,8 @@ public final class SearchHistoryOverlay {
     private final String feature;
     private final String scope;
     private final List<Host> hosts;
-    /** 押す・キーを画面の出来事で受けるか(偽なら、呼ぶ側が {@link #click}・{@link #key} を先に呼ぶ —— EMI)。 */
-    private final boolean eventInput;
+    /** 押す・キーを画面の出来事で受ける画面の条件(null なら画面の出来事では受けない —— EMI)。 */
+    private final Predicate<Screen> eventInputFilter;
     /** 続けて書けなかった回数(ウィンドウごと —— FAILED にするのは、書こうとしたウィンドウの機能だけ)。 */
     private int writeFailures;
     /** ↑↓で選んだ行(入力に合う一覧の中の位置。-1 は選んでいない)。 */
@@ -127,10 +128,19 @@ public final class SearchHistoryOverlay {
      * @param eventInput 押す・キーを画面の出来事で受けるか
      */
     public SearchHistoryOverlay(String feature, String scope, List<Host> hosts, boolean eventInput) {
+        this(feature, scope, hosts, eventInput ? screen -> true : null);
+    }
+
+    /**
+     * @param feature          このウィンドウを持つ機能(guard と FAILED の宛先)
+     * @param scope            帳の名前(空ならプレイヤーの帳そのまま —— AE2 の端末と EMI の帳)
+     * @param eventInputFilter 押す・キーを画面の出来事で受ける画面の条件(null なら受けない)
+     */
+    public SearchHistoryOverlay(String feature, String scope, List<Host> hosts, Predicate<Screen> eventInputFilter) {
         this.feature = feature;
         this.scope = scope;
         this.hosts = List.copyOf(hosts);
-        this.eventInput = eventInput;
+        this.eventInputFilter = eventInputFilter;
         ALL.add(this);
     }
 
@@ -209,14 +219,15 @@ public final class SearchHistoryOverlay {
         NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST, false, ScreenEvent.Render.Post.class,
                 event -> guard(() -> render(event)));
         NeoForge.EVENT_BUS.addListener(RenderTooltipEvent.Pre.class, event -> guard(() -> onTooltip(event)));
-        if (eventInput) {
+        if (eventInputFilter != null) {
             NeoForge.EVENT_BUS.addListener(ScreenEvent.KeyPressed.Pre.class, event -> guard(() -> {
-                if (key(event.getScreen(), event.getKeyCode())) {
+                if (eventInputFilter.test(event.getScreen()) && key(event.getScreen(), event.getKeyCode())) {
                     event.setCanceled(true);
                 }
             }));
             NeoForge.EVENT_BUS.addListener(ScreenEvent.MouseButtonPressed.Pre.class, event -> guard(() -> {
-                if (click(event.getScreen(), event.getMouseX(), event.getMouseY(), event.getButton())) {
+                if (eventInputFilter.test(event.getScreen())
+                        && click(event.getScreen(), event.getMouseX(), event.getMouseY(), event.getButton())) {
                     event.setCanceled(true);
                 }
             }));

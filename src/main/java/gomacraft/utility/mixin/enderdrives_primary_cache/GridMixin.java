@@ -20,6 +20,12 @@ public abstract class GridMixin {
         EnderDrivesPrimaryCache.invalidate();
     }
 
+    @Group(name = "gomacraft_utility$enderdrives_primary_cache$grid_add_return", min = 1)
+    @Inject(method = "add", at = @At("RETURN"), require = 0)
+    private void gomacraftUtility$afterAdd(CallbackInfo ci) {
+        EnderDrivesPrimaryCache.invalidate();
+    }
+
     @Group(name = "gomacraft_utility$enderdrives_primary_cache$grid_remove", min = 1)
     @Inject(method = "remove", at = @At("HEAD"), require = 0)
     private void gomacraftUtility$onRemove(CallbackInfo ci) {

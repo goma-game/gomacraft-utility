@@ -21,9 +21,21 @@ public abstract class DriveBlockEntityMixin {
         EnderDrivesPrimaryCache.invalidate();
     }
 
+    @Group(name = "gomacraft_utility$enderdrives_primary_cache$drive_inventory_return", min = 1)
+    @Inject(method = "onChangeInventory", at = @At("RETURN"), require = 0)
+    private void gomacraftUtility$afterChangeInventory(CallbackInfo ci) {
+        EnderDrivesPrimaryCache.invalidate();
+    }
+
     @Group(name = "gomacraft_utility$enderdrives_primary_cache$drive_state", min = 1)
     @Inject(method = "onMainNodeStateChanged", at = @At("HEAD"), require = 0)
     private void gomacraftUtility$onStateChanged(CallbackInfo ci) {
+        EnderDrivesPrimaryCache.invalidate();
+    }
+
+    @Group(name = "gomacraft_utility$enderdrives_primary_cache$drive_state_return", min = 1)
+    @Inject(method = "onMainNodeStateChanged", at = @At("RETURN"), require = 0)
+    private void gomacraftUtility$afterStateChanged(CallbackInfo ci) {
         EnderDrivesPrimaryCache.invalidate();
     }
 }

@@ -165,6 +165,32 @@ public final class ClientSettings {
         raw.computeIfAbsent(setting.feature(), f -> new LinkedHashMap<>()).put(setting.key(), setting.format(value));
     }
 
+    /** 複数の設定値をまとめて適用して保存する。保存に失敗した場合はメモリ上の状態も変更前に戻す。 */
+    public synchronized void updateAndSave(Map<Setting<?>, Object> changes) throws IOException {
+        if (changes.isEmpty()) {
+            return;
+        }
+        Map<String, Map<String, String>> backup = new LinkedHashMap<>();
+        for (Map.Entry<String, Map<String, String>> entry : raw.entrySet()) {
+            backup.put(entry.getKey(), new LinkedHashMap<>(entry.getValue()));
+        }
+        try {
+            for (Map.Entry<Setting<?>, Object> entry : changes.entrySet()) {
+                setUnchecked(entry.getKey(), entry.getValue());
+            }
+            save();
+        } catch (IOException | RuntimeException e) {
+            raw.clear();
+            raw.putAll(backup);
+            throw e;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private <T> void setUnchecked(Setting<T> setting, Object value) {
+        set(setting, (T) value);
+    }
+
     /** 読めなかった行・値(起動のときに警告へ出す)。 */
     public synchronized List<String> problems() {
         List<String> out = new ArrayList<>(problems);
@@ -218,8 +244,8 @@ public final class ClientSettings {
             values.computeIfAbsent(s.feature(), f -> new LinkedHashMap<>()).put(s.key(), current(s));
         }
         String base = original != null ? original
-                : "# gomacraft_utility の手元の設定(機能ごとの節)。ゲームの中の設定の画面からも変えられる。\n"
-                        + "# 読めない値は既定の値を使う。\n";
+                : "# gomacraft_utility のクライアント設定です。ゲーム内の設定画面からも変更できます。\n"
+                        + "# 読み込めない値が書かれている場合は既定値が使われます。\n";
         return TomlLines.update(base, values);
     }
 

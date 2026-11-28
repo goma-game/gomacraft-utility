@@ -9,6 +9,7 @@ import java.util.List;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
 /**
  * EMI の検索欄の検索語の履歴(goma-org/gomabase#2295 の 2 回目の確かめの 2)。ウィンドウの形と操作は
@@ -58,7 +59,7 @@ public final class EmiSearchHistory {
             public boolean recordOnClose() {
                 return false;
             }
-        }), true);
+        }), screen -> !(screen instanceof AbstractContainerScreen<?>));
         // 欄から focus が外れたら記すのは、ウィンドウの共通の決まり(SearchHistoryOverlay の watchFocus)
         overlay.register();
     }

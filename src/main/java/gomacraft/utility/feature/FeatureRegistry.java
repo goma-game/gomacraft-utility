@@ -151,7 +151,13 @@ public final class FeatureRegistry {
 
     /** 起動の後に {@link #setActive} で止めているか。 */
     public synchronized boolean isSuspended(String id) {
-        return suspended.contains(id);
+        return isLoaded(id) && suspended.contains(id);
+    }
+
+    /** 起動時または実行時にエラーで FAILED になっているか。 */
+    public synchronized boolean isFailed(String id) {
+        FeatureStatus s = statuses.get(id);
+        return s != null && s.state() == FeatureState.FAILED;
     }
 
     /**
@@ -228,6 +234,7 @@ public final class FeatureRegistry {
         if (before != null && before.state() == FeatureState.FAILED) {
             return;
         }
+        suspended.remove(key);
         statuses.put(key, new FeatureStatus(key, FeatureState.FAILED, reason));
         if (emitted) {
             sink.accept(line());

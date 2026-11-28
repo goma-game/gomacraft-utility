@@ -178,6 +178,10 @@ public final class ShareClient {
                 .then(Commands.argument("token", StringArgumentType.word())
                         .executes(context -> {
                             String token = StringArgumentType.getString(context, "token");
+                            if (Features.registry().isFailed(ScreenshotFeatures.SHARE)) {
+                                say("gomacraft_utility.settings.failed", "Broken and stopped.");
+                                return 1;
+                            }
                             if (Features.registry().isSuspended(ScreenshotFeatures.SHARE)) {
                                 // 止める前に出たボタンを押した: 黙って何もしないと、壊れたように見える
                                 say("gomacraft_utility.screenshot.stopped",

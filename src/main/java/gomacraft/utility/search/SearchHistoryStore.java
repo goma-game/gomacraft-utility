@@ -92,15 +92,19 @@ public final class SearchHistoryStore {
             return false;
         }
         List<Entry> entries = entries(player);
+        int firstRecent = firstRecentIndex(entries);
         int index = indexOf(entries, value);
         if (index >= 0) {
             Entry existing = entries.get(index);
             if (existing.favorite()) {
                 return false;
             }
+            if (index == firstRecent && entries.size() - firstRecent <= maxRecent) {
+                return false;
+            }
             entries.remove(index);
         }
-        entries.add(firstRecentIndex(entries), new Entry(value, false));
+        entries.add(firstRecent, new Entry(value, false));
         trim(entries);
         return true;
     }

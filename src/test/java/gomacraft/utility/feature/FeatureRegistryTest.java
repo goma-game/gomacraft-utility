@@ -226,4 +226,17 @@ class FeatureRegistryTest {
         assertFalse(registry.isOn("broken"));
         assertFalse(registry.enableableByRestart("broken"));
     }
+
+    @Test
+    void suspendedFeatureBecomingFailedIsNoLongerSuspended() {
+        FeatureRegistry registry = FeatureRegistry.evaluate(
+                List.of(feature("a", true)), mods(Map.of()), FeatureConfig.empty(), line -> { });
+        assertTrue(registry.setActive("a", false));
+        assertTrue(registry.isSuspended("a"));
+        assertFalse(registry.isFailed("a"));
+
+        registry.markFailed("a", "boom");
+        assertTrue(registry.isFailed("a"));
+        assertFalse(registry.isSuspended("a"));
+    }
 }

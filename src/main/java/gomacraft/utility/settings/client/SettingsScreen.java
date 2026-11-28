@@ -474,17 +474,16 @@ public final class SettingsScreen extends Screen {
                 featureChanges.clear();
             }
         }
-        boolean settingsChanged = false;
+        Map<ClientSettings.Setting<?>, Object> settingChanges = new LinkedHashMap<>();
         for (Map.Entry<ClientSettings.Setting<?>, Object> e : values.entrySet()) {
             if (!Objects.equals(openedSettings.get(e.getKey()), e.getValue())) {
-                set(e.getKey(), e.getValue());
-                settingsChanged = true;
+                settingChanges.put(e.getKey(), e.getValue());
             }
         }
-        if (settingsChanged) {
+        if (!settingChanges.isEmpty()) {
             // 書くと各機能が値を写す(止めていた機能を動かし直した後に書く —— 止めている間の機能は写さない)
             try {
-                settings.save();
+                settings.updateAndSave(settingChanges);
             } catch (IOException e) {
                 LOGGER.warn("gomacraft_utility: 手元の設定を書けない: {}", e.toString());
             }
@@ -496,7 +495,7 @@ public final class SettingsScreen extends Screen {
         List<String> restart = new ArrayList<>();
         featureChanges.forEach((id, on) -> {
             if (on && !registry.isLoaded(id) && registry.enableableByRestart(id)) {
-                restart.add("・" + paths.getOrDefault(id, I18n.get("gomacraft_utility.feature." + id)));
+                restart.add("- " + paths.getOrDefault(id, I18n.get("gomacraft_utility.feature." + id)));
             }
         });
         if (restart.isEmpty()) {
@@ -507,11 +506,6 @@ public final class SettingsScreen extends Screen {
                 Component.translatable("gomacraft_utility.settings.restart"),
                 // Esc で閉じない(閉じると親の画面へ戻らずゲームへ戻る)。OK で親の画面へ
                 Component.literal(String.join("\n", restart)), CommonComponents.GUI_OK, false));
-    }
-
-    @SuppressWarnings("unchecked")
-    private <T> void set(ClientSettings.Setting<T> setting, Object value) {
-        settings.set(setting, (T) value);
     }
 
     private static FeatureConfig readFeatureConfig() {

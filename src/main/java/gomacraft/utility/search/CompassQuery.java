@@ -33,6 +33,8 @@ public final class CompassQuery {
     public record Term(Kind kind, String text) {
     }
 
+    private static final Pattern SPLIT = Pattern.compile("[\\s\\u3000]+");
+
     private CompassQuery() {
     }
 
@@ -56,7 +58,7 @@ public final class CompassQuery {
         if (input == null) {
             return out;
         }
-        for (String word : input.toLowerCase(Locale.ROOT).trim().split("\\s+")) {
+        for (String word : SPLIT.split(input.toLowerCase(Locale.ROOT).strip())) {
             if (word.isEmpty()) {
                 continue;
             }
@@ -89,7 +91,7 @@ public final class CompassQuery {
         if (raw == null) {
             return false;
         }
-        for (String word : raw.trim().split("\\s+")) {
+        for (String word : SPLIT.split(raw.strip())) {
             if (!word.isEmpty() && kindOf(word.charAt(0)) != Kind.NAME) {
                 return true;
             }
@@ -98,7 +100,7 @@ public final class CompassQuery {
     }
 
     /** 詰める空白と記号({@code ' ’ _ - . :})。キーを打つたび・項目ごとに使うので、1 つだけ作る。 */
-    private static final Pattern COMPACT = Pattern.compile("[\\s'\u2019_\\-.:]");
+    private static final Pattern COMPACT = Pattern.compile("[\\s\\u3000'\u2019_\\-.:]");
 
     /** 空白と記号を詰める(Mod の名前・ディメンションの名前を、空白を詰めて打った語と比べる)。 */
     static String compact(String text) {
