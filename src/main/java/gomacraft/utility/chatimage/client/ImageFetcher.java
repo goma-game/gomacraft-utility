@@ -24,9 +24,9 @@ import javax.imageio.stream.ImageInputStream;
 /**
  * 画像を取りにいって、絵(NativeImage)にする。主スレッドの外(専用の 2 本のスレッド)で呼ぶ。
  *
- * <p>形の決め方: 取りにいく先は {@code media.discordapp.net} に {@code format=png} を付けたもの
- * ({@link DiscordImageUrl#fetchUri})。webp は Java の ImageIO で読めないので、PNG で受け取るために Discord の側で
- * 変えてもらう。受けたものは形によらず ImageIO で読む({@code NativeImage.read} は PNG の頭を確かめて、それ以外を
+ * <p>形の決め方: 取りにいく先は {@code media.discordapp.net}({@link DiscordImageUrl#fetchUri})。webp は Java の
+ * ImageIO で読めないので、webp と gif だけ {@code format=png} で Discord の側で変えてもらう(png・jpg はそのまま。
+ * 写真を PNG に変えると上限を超えやすい)。受けたものは形によらず ImageIO で読む({@code NativeImage.read} は PNG の頭を確かめて、それ以外を
  * 断るため。PNG・JPEG・GIF なら ImageIO で読める)。読む前に頭の幅と高さを見て大きすぎるものを断り、大きい絵は
  * 間引いて読む(長い辺を {@link #MAX_SIDE} 以下にする)。読んだ点を NativeImage へ写す(PNG へ作り直さない)。
  *
@@ -88,7 +88,7 @@ final class ImageFetcher {
         HttpRequest request = HttpRequest.newBuilder(uri)
                 .timeout(REQUEST_TIMEOUT)
                 .header("User-Agent", "gomacraft-utility (Minecraft mod)")
-                .header("Accept", "image/png,image/*;q=0.8")
+                .header("Accept", "image/*")
                 .GET()
                 .build();
         HttpResponse<InputStream> response;

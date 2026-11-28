@@ -27,13 +27,16 @@ class DiscordImageUrlTest {
             assertEquals("https", parsed.fetchUri().getScheme(), url);
             assertEquals("media.discordapp.net", parsed.fetchUri().getHost(), url);
             assertEquals(-1, parsed.fetchUri().getPort(), url);
-            assertTrue(parsed.fetchUri().getRawQuery().endsWith("format=png"), url);
         }
-        // 署名の query は残し、大きさ・形の指定は外して付け直す
+        // 署名の query は残し、大きさ・形の指定は外す。PNG に変えてもらうのは webp と gif だけ
         assertEquals("https://media.discordapp.net/attachments/1/2/a.webp?format=png",
                 DiscordImageUrl.parse(accepted.get(2)).orElseThrow().fetchUri().toString());
-        assertEquals("https://media.discordapp.net/attachments/1/2/a.png?ex=6750a1b2&is=674f5032&hm=abc123&format=png",
+        assertEquals("https://media.discordapp.net/attachments/1/2/a.gif?format=png",
+                DiscordImageUrl.parse(accepted.get(4)).orElseThrow().fetchUri().toString());
+        assertEquals("https://media.discordapp.net/attachments/1/2/a.png?ex=6750a1b2&is=674f5032&hm=abc123",
                 DiscordImageUrl.parse(accepted.get(0)).orElseThrow().fetchUri().toString());
+        assertEquals("https://media.discordapp.net/attachments/1/2/a.JPG",
+                DiscordImageUrl.parse(accepted.get(1)).orElseThrow().fetchUri().toString());
 
         List<String> refused = List.of(
                 "http://cdn.discordapp.com/attachments/1/2/a.png",

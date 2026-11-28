@@ -22,7 +22,10 @@ import net.minecraft.resources.ResourceLocation;
  * ({@code TextureManager.release} が DynamicTexture を閉じ、点の記憶も放す)。
  */
 final class ChatImageCache {
-    /** 覚えておく数(絵は長い辺 2048 まで。多くて約 16 MB × この数)。 */
+    /**
+     * 覚えておく数(絵は長い辺 2048 まで。1 枚で GPU に約 16 MB、DynamicTexture が点を手元にも持つので合わせて約
+     * 32 MB × この数)。
+     */
     private static final int MAX_ENTRIES = 8;
     private static final long RETRY_MS = 30_000;
 

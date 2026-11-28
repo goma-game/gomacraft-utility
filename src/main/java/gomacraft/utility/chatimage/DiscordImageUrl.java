@@ -21,6 +21,8 @@ import java.util.Set;
 public final class DiscordImageUrl {
     private static final Set<String> HOSTS = Set.of("cdn.discordapp.com", "media.discordapp.net");
     private static final Set<String> EXTENSIONS = Set.of("png", "jpg", "jpeg", "gif", "webp");
+    /** Discord の側で PNG に変えてもらう拡張子({@link #fetchUri})。 */
+    private static final Set<String> CONVERTED = Set.of("gif", "webp");
     private static final String FETCH_HOST = "media.discordapp.net";
     /** 組み直すときに外す query(こちらで付け直す・大きさを変えさせない)。 */
     private static final Set<String> DROPPED_PARAMS = Set.of("format", "width", "height", "quality");
@@ -28,11 +30,13 @@ public final class DiscordImageUrl {
     private final String original;
     private final String rawPath;
     private final List<String> params;
+    private final boolean convert;
 
-    private DiscordImageUrl(String original, String rawPath, List<String> params) {
+    private DiscordImageUrl(String original, String rawPath, List<String> params, boolean convert) {
         this.original = original;
         this.rawPath = rawPath;
         this.params = params;
+        this.convert = convert;
     }
 
     /** Discord の添付の画像の URL なら、その形を返す。それ以外は空(バニラの扱いのまま)。 */
@@ -66,7 +70,8 @@ public final class DiscordImageUrl {
         if (dot < 0 || path.lastIndexOf('/') > dot) {
             return Optional.empty();
         }
-        if (!EXTENSIONS.contains(path.substring(dot + 1).toLowerCase(Locale.ROOT))) {
+        String extension = path.substring(dot + 1).toLowerCase(Locale.ROOT);
+        if (!EXTENSIONS.contains(extension)) {
             return Optional.empty();
         }
         List<String> params = new ArrayList<>();
@@ -83,7 +88,7 @@ public final class DiscordImageUrl {
                 }
             }
         }
-        return Optional.of(new DiscordImageUrl(url, rawPath, List.copyOf(params)));
+        return Optional.of(new DiscordImageUrl(url, rawPath, List.copyOf(params), CONVERTED.contains(extension)));
     }
 
     /** チャットに書かれていた元の URL(ブラウザで開くとき)。 */
@@ -92,15 +97,19 @@ public final class DiscordImageUrl {
     }
 
     /**
-     * 取りにいく先。いつも {@code https://media.discordapp.net} の同じ path で、署名の query(ex・is・hm)を残し、
-     * {@code format=png} を付ける(webp なども PNG で受け取る)。
+     * 取りにいく先。いつも {@code https://media.discordapp.net} の同じ path で、署名の query(ex・is・hm)を残す。
+     * webp と gif にだけ {@code format=png} を付ける(webp は Java の ImageIO で読めない。gif は動く絵の代わりに
+     * 1 枚で受け取る)。png・jpg はそのまま受け取る(写真を PNG に変えると何倍にも大きくなり、上限を超えるため)。
      */
     public URI fetchUri() {
-        StringBuilder out = new StringBuilder("https://").append(FETCH_HOST).append(rawPath).append('?');
-        for (String param : params) {
-            out.append(param).append('&');
+        List<String> query = new ArrayList<>(params);
+        if (convert) {
+            query.add("format=png");
         }
-        out.append("format=png");
+        StringBuilder out = new StringBuilder("https://").append(FETCH_HOST).append(rawPath);
+        if (!query.isEmpty()) {
+            out.append('?').append(String.join("&", query));
+        }
         return URI.create(out.toString());
     }
 
