@@ -1,12 +1,14 @@
 name: build-fabric
 
 # fabric 版(fabric/)の組み立て・試験(JUnit)・起動の自己検査(Fabric API の gametest のサーバ)。forge 版の build.yml の対。
-# fabric/ は forge 版と別の組み立てなので、fabric の側を触ったときだけ回す。
+# fabric/ は forge 版と別の組み立てなので、fabric の側と、forge 版の src(写しの元)を触ったときだけ回す。
 # public のリポジトリなので GitHub-hosted の runner で回す。
 on:
   pull_request:
     paths:
       - 'fabric/**'
+      # forge 版から写したファイルのずれ(check-fabric-build.sh copies)を、forge 版だけを直したときにも見る
+      - 'src/**'
       - '.github/workflows/build-fabric.yml'
       - '.github/workflows/release-fabric.yml'
       - '.github/scripts/check-fabric-build.sh'
@@ -14,6 +16,8 @@ on:
     branches: [main]
     paths:
       - 'fabric/**'
+      # forge 版から写したファイルのずれ(check-fabric-build.sh copies)を、forge 版だけを直したときにも見る
+      - 'src/**'
       - '.github/workflows/build-fabric.yml'
       - '.github/workflows/release-fabric.yml'
       - '.github/scripts/check-fabric-build.sh'
@@ -26,7 +30,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  build-fabric:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     defaults:
@@ -34,6 +38,8 @@ jobs:
         working-directory: fabric
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      - name: forge 版から写したファイルのずれを確かめる
+        run: sh ../.github/scripts/check-fabric-build.sh copies
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin

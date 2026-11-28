@@ -11,12 +11,61 @@
 #    全部 FAILED になっている(= 壊れた mixin がその機能だけを止め、起動は続いた)。
 #    文法の正は fabric/src/main/java/gomacraft/utility/feature/StatusLine.java(forge 版と同じ形。gomabase の起動の
 #    検証も同じ形を読む)。
+# 3. 写し: forge 版から直さずに写したファイル(下の COPIES)が、forge 版と同じ中身のままか。forge 版だけを直して、
+#    fabric 版が黙って古いまま残るのを止める(どちらかを直したら、もう片方も揃える。fabric 版だけ違う形にするなら、
+#    一覧から外し、冒頭に「fabric 版:」で違いを書く)。build-fabric.yml は forge 版の src/** の変更でも回る。
 #
 # 使い方(fabric/ で): sh ../.github/scripts/check-fabric-build.sh jar
 #                     sh ../.github/scripts/check-fabric-build.sh selftest <latest.log>
+#                     sh ../.github/scripts/check-fabric-build.sh copies
 set -eu
 
+# forge 版(../src)と同じ中身のはずのファイル(src/ からの相対パス)
+COPIES='
+main/java/gomacraft/utility/feature/Feature.java
+main/java/gomacraft/utility/feature/FeatureConfig.java
+main/java/gomacraft/utility/feature/FeatureState.java
+main/java/gomacraft/utility/feature/FeatureStatus.java
+main/java/gomacraft/utility/feature/StatusLine.java
+main/java/gomacraft/utility/feature/TomlLines.java
+main/java/gomacraft/utility/mixin/selftest_at/SelftestAtMixin.java
+main/java/gomacraft/utility/mixin/selftest_broken/SelftestBrokenMixin.java
+main/java/gomacraft/utility/mixin/selftest_missing_class/SelftestMissingClassMixin.java
+main/java/gomacraft/utility/mixinsupport/GomacraftMixinPlugin.java
+main/java/gomacraft/utility/mixinsupport/MixinFailureHandler.java
+main/java/gomacraft/utility/screenshot/ScreenshotRules.java
+main/java/gomacraft/utility/screenshot/server/InboxState.java
+main/java/gomacraft/utility/screenshot/server/Spool.java
+main/java/gomacraft/utility/settings/ClientSettings.java
+main/java/gomacraft/utility/settings/Settings.java
+test/java/gomacraft/utility/MixinContractTest.java
+test/java/gomacraft/utility/StatusLineContractTest.java
+test/java/gomacraft/utility/feature/FeatureConfigTest.java
+test/java/gomacraft/utility/feature/FeatureConfigUpdateTest.java
+test/java/gomacraft/utility/screenshot/ScreenshotRulesTest.java
+test/java/gomacraft/utility/screenshot/server/InboxStateTest.java
+test/java/gomacraft/utility/screenshot/server/SpoolTest.java
+test/java/gomacraft/utility/settings/ClientSettingsTest.java
+'
+
 case "${1:-}" in
+  copies)
+    bad=0
+    count=0
+    for path in $COPIES; do
+      count=$((count + 1))
+      if [ ! -f "../src/$path" ] || [ ! -f "src/$path" ]; then
+        echo "NG: 写しの片方が無い: $path(forge 版 ../src・fabric 版 src)" >&2
+        bad=1
+      elif ! cmp -s "../src/$path" "src/$path"; then
+        echo "NG: forge 版と中身が違う: $path(揃えるか、一覧から外して冒頭に「fabric 版:」を書く)" >&2
+        bad=1
+      fi
+    done
+    [ "$count" -gt 0 ] || { echo "NG: 写しの一覧が空" >&2; exit 1; }
+    [ "$bad" -eq 0 ] || exit 1
+    echo "OK: 写し $count 件が forge 版と同じ"
+    ;;
   jar)
     version=$(sed -n 's/^mod_version=//p' gradle.properties)
     [ -n "$version" ] || { echo "NG: gradle.properties に mod_version が無い" >&2; exit 1; }
@@ -68,7 +117,7 @@ case "${1:-}" in
     echo "OK: 壊れた機能だけが止まり、起動は続いた"
     ;;
   *)
-    echo "使い方: $0 jar | selftest <latest.log>" >&2
+    echo "使い方: $0 jar | selftest <latest.log> | copies" >&2
     exit 2
     ;;
 esac

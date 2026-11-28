@@ -62,7 +62,7 @@
 
 - 位置づけ: forge 版(リポジトリの根。NeoForge)が元で、fabric 版はバニラの土台の gomacraft のサーバ(fabric のサーバ)向けに、一部の便利な機能を移したもの(ユーザ決定 2026-11-28、goma-org/gomabase#2295)。forge と fabric で Minecraft の版が違うので、「jar は 1 つ」はローダごとに 1 つと読む。機能を足すときは forge 版で作ってから移す。
 - 組み立ては `fabric/` の中で閉じる(wrapper・`gradle.properties`・`build.gradle` を別に持ち、根の組み立てとは読み合わない)。版の正は `fabric/gradle.properties`(fabric のサーバが積む Minecraft・Loader・Fabric API に合わせる)。JDK の版は Minecraft の版が決める(手元に無ければ Docker の `gradle:<版>-jdk<版>` の箱で `./gradlew build runSelftestServer` を `fabric/` で回す)。
-- 写し方: forge 版のコードを同じ包み・同じ名前で `fabric/src` に写す(共有の置き場は持たない —— 片方の変更で、もう片方の組み立てが黙って壊れないように)。直さずに写したファイルは中身が同じ(`cmp` で比べられる)。直したファイルは冒頭のコメントに「fabric 版:」で違いを書く。forge 版の枠(`feature`・`mixinsupport`)・起動の 1 行・置き場の形を変えたら、fabric 版の写しも同じ PR か次の PR で揃える。
+- 写し方: forge 版のコードを同じ包み・同じ名前で `fabric/src` に写す(共有の置き場は持たない —— 片方の変更で、もう片方の組み立てが黙って壊れないように)。直さずに写したファイルは中身が同じで、その一覧は `check-fabric-build.sh` の `COPIES`(`copies` が `cmp` で比べ、`build-fabric.yml` は forge 版の `src/**` の変更でも回る)。forge 版の写しの元を直したら、同じ PR で fabric 版も揃える(揃えないと build-fabric が赤になる)。fabric 版だけ違う形にするファイルは一覧から外し、冒頭のコメントに「fabric 版:」で違いを書く。
 - 約束は forge 版と同じ: mod id(`gomacraft_utility`)・設定のファイルの名前・起動時の 1 行の形・mixin の書き方(`require = 0` と `@Group`)・スクショの置き場の形とログの 1 行・通信の channel の名前。違うのは次だけ。
   - jar の名前は `gomacraft_utility-fabric-<mod_version>.jar`(`check-fabric-build.sh jar` が固定する)。
   - 版の範囲(`Requirement`)は Fabric の書き方(`>=1.2 <2`)で、Fabric Loader の部品が読む(`ModLookup#matches`)。

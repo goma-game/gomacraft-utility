@@ -36,5 +36,6 @@
   "gomacraft_utility.screenshot.result.bad_image": "サーバー側でスクリーンショットを読み込めませんでした。",
   "gomacraft_utility.screenshot.result.spool_full": "投稿待ちのスクリーンショットが上限に達しています。しばらく待ってからもう一度お試しください。",
   "gomacraft_utility.screenshot.result.broken": "スクリーンショットを最後まで受信できませんでした。少し待ってからもう一度お試しください。",
-  "gomacraft_utility.screenshot.result.error": "サーバー側でスクリーンショットを保存できませんでした。"
+  "gomacraft_utility.screenshot.result.error": "サーバー側でスクリーンショットを保存できませんでした。",
+  "gomacraft_utility.settings.save_failed": "設定を保存できませんでした"
 }

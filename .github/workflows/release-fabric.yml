@@ -5,8 +5,8 @@ name: release-fabric
 # 公開は GitHub の Release だけ(ユーザ決定 2026-11-28、goma-org/gomabase#2295)。
 #
 # 2 つの job に分ける理由と、止めるものは release.yml と同じ:
-# - build: 読み取りの権限だけで、tag を確かめ、検査を回し、jar と sha256 を artifact に上げる
-# - publish: checkout も Gradle も使わず、artifact を下ろして sha256 を照合し、tag がまだ同じ commit を
+# - build-fabric: 読み取りの権限だけで、tag を確かめ、検査を回し、jar と sha256 を artifact に上げる
+# - publish-fabric: checkout も Gradle も使わず、artifact を下ろして sha256 を照合し、tag がまだ同じ commit を
 #   指すかを確かめてから release を作る
 # - 止める: tag の commit が main に無い / tag と fabric/gradle.properties の mod_version が合わない /
 #   同じ tag の release が既に在る / 検査の後に tag が別の commit へ付け替えられた
@@ -22,7 +22,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build:
+  build-fabric:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -54,6 +54,8 @@ jobs:
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
+      - name: forge 版から写したファイルのずれを確かめる
+        run: sh ../.github/scripts/check-fabric-build.sh copies
       - uses: actions/setup-java@d1374f8ac74474200d16ef8ecee22c7ae7a51880  # v6.3.0
         with:
           distribution: temurin
@@ -85,15 +87,15 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
-  publish:
-    needs: build
+  publish-fabric:
+    needs: build-fabric
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
       contents: write
     env:
       TAG: ${{ github.ref_name }}
-      VERSION: ${{ needs.build.outputs.version }}
+      VERSION: ${{ needs.build-fabric.outputs.version }}
       GH_TOKEN: ${{ github.token }}
       GH_REPO: ${{ github.repository }}
     steps:

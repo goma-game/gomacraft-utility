@@ -36,5 +36,6 @@
   "gomacraft_utility.screenshot.result.bad_image": "The server could not read the screenshot.",
   "gomacraft_utility.screenshot.result.spool_full": "Too many screenshots are waiting to be posted. Try again later.",
   "gomacraft_utility.screenshot.result.broken": "The screenshot was not received completely. Wait a moment and try again.",
-  "gomacraft_utility.screenshot.result.error": "The server could not save the screenshot."
+  "gomacraft_utility.screenshot.result.error": "The server could not save the screenshot.",
+  "gomacraft_utility.settings.save_failed": "Could not save the settings"
 }

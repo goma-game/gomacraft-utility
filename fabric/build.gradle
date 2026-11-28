@@ -13,7 +13,7 @@ group = 'gomacraft.utility'
 
 base {
     // ⚠ 配る jar の名前は gomacraft_utility-fabric-<mod_version>.jar(forge の gomacraft_utility-<版>.jar と分ける)。
-    // gomabase の配布の宣言がこの名前で読むので約束(check-build.sh jar が固定する)
+    // gomabase の配布の宣言がこの名前で読むので約束(.github/scripts/check-fabric-build.sh jar が固定する)
     archivesName = "${mod_id}-fabric"
 }
 
