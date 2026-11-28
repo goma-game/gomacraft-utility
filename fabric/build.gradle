@@ -1,0 +1,87 @@
+plugins {
+    // 26.1 からの Minecraft は難読化されていないので、remap しない方の Loom(net.fabricmc.fabric-loom)を使う。
+    // mappings の宣言は無く、Mojang の名前のまま組み立てる
+    id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+// 雛形は Fabric の公式の example mod(FabricMC/fabric-example-mod の 26.2 の枝、CC0-1.0)から、要るものだけを残した。
+// forge 版と同じ包みの形(gomacraft.utility.*)に置くため、splitEnvironmentSourceSets は使わない
+// (クライアントのクラスがサーバで読まれないことは、専用サーバの起動の自己検査が見る)。
+
+version = mod_version
+group = 'gomacraft.utility'
+
+base {
+    // ⚠ 配る jar の名前は gomacraft_utility-fabric-<mod_version>.jar(forge の gomacraft_utility-<版>.jar と分ける)。
+    // gomabase の配布の宣言がこの名前で読むので約束(check-build.sh jar が固定する)
+    archivesName = "${mod_id}-fabric"
+}
+
+repositories {
+    exclusiveContent {
+        forRepository { maven { url = 'https://maven.terraformersmc.com/' } }
+        filter { includeGroup 'com.terraformersmc' }
+    }
+}
+
+loom {
+    runs {
+        // 起動の自己検査(forge 版の runGameTestServer の対)。Fabric API の gametest のサーバ(専用サーバの側)を起動し、
+        // わざと壊した機能を一覧に入れる(gomacraft_utility.selftest)。gametest のサーバは試験を回し終えると自分で止まる。
+        // ⚠ EULA の同意のファイルは作らない(gametest のサーバは同意を問わない —— Fabric API の gametest の MainMixin)
+        selftestServer {
+            server()
+            name = 'Selftest Server'
+            runDir = 'run-selftest'
+            vmArg '-Dfabric-api.gametest'
+            vmArg '-Dgomacraft_utility.selftest=true'
+        }
+    }
+}
+
+dependencies {
+    minecraft "com.mojang:minecraft:${minecraft_version}"
+    implementation "net.fabricmc:fabric-loader:${loader_version}"
+    implementation "net.fabricmc.fabric-api:fabric-api:${fabric_api_version}"
+    // 設定の画面の入口(Mod Menu の一覧の「設定」)。在るときだけ使う
+    compileOnly "com.terraformersmc:modmenu:${modmenu_version}"
+
+    testImplementation platform('org.junit:junit-bom:5.13.4')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test', Test).configure {
+    useJUnitPlatform()
+}
+
+processResources {
+    var replaceProperties = [
+            mod_id                : mod_id,
+            mod_version           : mod_version,
+            minecraft_version_range: minecraft_version_range,
+            loader_version_range  : loader_version_range,
+    ]
+    inputs.properties replaceProperties
+    filesMatching('fabric.mod.json') {
+        expand replaceProperties
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 25
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_25
+    targetCompatibility = JavaVersion.VERSION_25
+}
+
+jar {
+    // configuration cache のため、名前は組み立ての前に決めておく(実行の時に project を引かない)
+    var licenseName = "LICENSE_${mod_id}"
+    from('../LICENSE') {
+        rename { licenseName }
+    }
+}

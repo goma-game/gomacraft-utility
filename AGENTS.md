@@ -57,3 +57,15 @@
   - 通信を足すときは payload を全部 `optional()` にし、送る前に相手がその channel を持つかを確かめる(`hasChannel`。この Mod の無い相手もいる)。
 - 起動時の状態の 1 行の形(`StatusLine`)は gomabase の起動の検証との約束。変えるときは gomabase の読み手(`tools/mc-client-boot.py`・`tools/scan-server-logs.py`)と同時に変える(見本の文字列を両方の試験に置いてある)。jar の名前(`gomacraft_utility-<mod_version>.jar`)も約束(`check-build.sh jar` が固定する)。
 - release: `gradle.properties` の `mod_version` を上げた PR をマージしてから、main の commit に `v<mod_version>` の tag を付けて `git push origin refs/tags/v<mod_version>` で押す(`git push origin v<mod_version>` の形は、GitHome のフックが恒久の枝への push として止める)。release の workflow が検査を回し、jar と sha256 を GitHub Release に置く(同じ tag の作り直しはしない —— gomabase が sha256 をピンする)。
+
+## fabric 版(`fabric/`)
+
+- 位置づけ: forge 版(リポジトリの根。NeoForge)が元で、fabric 版はバニラの土台の gomacraft のサーバ(fabric のサーバ)向けに、一部の便利な機能を移したもの(ユーザ決定 2026-11-28、goma-org/gomabase#2295)。forge と fabric で Minecraft の版が違うので、「jar は 1 つ」はローダごとに 1 つと読む。機能を足すときは forge 版で作ってから移す。
+- 組み立ては `fabric/` の中で閉じる(wrapper・`gradle.properties`・`build.gradle` を別に持ち、根の組み立てとは読み合わない)。版の正は `fabric/gradle.properties`(fabric のサーバが積む Minecraft・Loader・Fabric API に合わせる)。JDK の版は Minecraft の版が決める(手元に無ければ Docker の `gradle:<版>-jdk<版>` の箱で `./gradlew build runSelftestServer` を `fabric/` で回す)。
+- 写し方: forge 版のコードを同じ包み・同じ名前で `fabric/src` に写す(共有の置き場は持たない —— 片方の変更で、もう片方の組み立てが黙って壊れないように)。直さずに写したファイルは中身が同じ(`cmp` で比べられる)。直したファイルは冒頭のコメントに「fabric 版:」で違いを書く。forge 版の枠(`feature`・`mixinsupport`)・起動の 1 行・置き場の形を変えたら、fabric 版の写しも同じ PR か次の PR で揃える。
+- 約束は forge 版と同じ: mod id(`gomacraft_utility`)・設定のファイルの名前・起動時の 1 行の形・mixin の書き方(`require = 0` と `@Group`)・スクショの置き場の形とログの 1 行・通信の channel の名前。違うのは次だけ。
+  - jar の名前は `gomacraft_utility-fabric-<mod_version>.jar`(`check-fabric-build.sh jar` が固定する)。
+  - 版の範囲(`Requirement`)は Fabric の書き方(`>=1.2 <2`)で、Fabric Loader の部品が読む(`ModLookup#matches`)。
+  - event と通信の口は Fabric API。Fabric の payload は、もともと optional で、送る前に `canSend` で相手の受け口を確かめる(受け手を登録した channel だけが相手に名乗られる)。
+- CI は `.github/workflows/build-fabric.yml`(`fabric/` を触ったときだけ。組み立てと JUnit・配る jar・起動の自己検査)。起動の自己検査は Fabric API の gametest のサーバ(`runSelftestServer`)で、わざと壊した 3 つの機能が最初の 1 行で FAILED になることを見る(forge 版と同じ壊し方。何を確かめるかの正は `.github/scripts/check-fabric-build.sh`)。クライアントの mixin が当たったかは、forge 版と同じく gomabase のクライアントの起動の検証が見る。
+- release: `fabric/gradle.properties` の `mod_version` を上げた PR をマージしてから、main の commit に `fabric-v<mod_version>` の tag を付けて `git push origin refs/tags/fabric-v<mod_version>` で押す(`release-fabric.yml`。forge 版の `v*` の release とは別。公開は GitHub の Release だけ)。
