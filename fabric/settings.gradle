@@ -1,0 +1,14 @@
+// fabric 版の組み立て。forge 版(リポジトリの根)とは別の組み立てで、互いに読み合わない。
+// 雛形は Fabric の公式の example mod(FabricMC/fabric-example-mod の 26.2 の枝、CC0-1.0)から、要るものだけを残した。
+pluginManagement {
+    repositories {
+        maven {
+            name = 'Fabric'
+            url = 'https://maven.fabricmc.net/'
+        }
+        mavenCentral()
+        gradlePluginPortal()
+    }
+}
+
+rootProject.name = 'gomacraft-utility-fabric'

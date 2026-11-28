@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "gomacraft utility",
+  "description": "gomacraft utility (Fabric port of a subset of the NeoForge mod).",
+  "authors": ["gomagom"],
+  "contact": {
+    "sources": "https://github.com/goma-game/gomacraft-utility"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["gomacraft.utility.GomacraftUtility"],
+    "client": ["gomacraft.utility.GomacraftUtilityClient"],
+    "modmenu": ["gomacraft.utility.settings.client.ModMenuEntry"]
+  },
+  "mixins": ["gomacraft_utility.mixins.json"],
+  "depends": {
+    "fabricloader": "${loader_version_range}",
+    "minecraft": "${minecraft_version_range}",
+    "java": ">=25",
+    "fabric-api": "*"
+  }
+}
