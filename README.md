@@ -10,7 +10,7 @@ gomacraft サーバー向けのユーティリティ Mod です。NeoForge 版�
 
 ## Fabric 版（`fabric/`）
 
-Minecraft 26.2 のバニラベース環境向けに、NeoForge 版から Discord 連携・チャット関連機能（スクリーンショット投稿・Discord 画像表示・URL リンク化）のみを移植した版です。
+バニラベース環境(Minecraft の版は `fabric/gradle.properties`)向けに、NeoForge 版から Discord 連携・チャット関連機能（スクリーンショット投稿・Discord 画像表示・URL リンク化）のみを移植した版です。
 
 - 配布ファイルは `gomacraft_utility-fabric-<バージョン>.jar` として GitHub Release に公開します（NeoForge 版の `gomacraft_utility-<バージョン>.jar` とは別タグで管理します）。
 
@@ -27,4 +27,4 @@ Minecraft 26.2 のバニラベース環境向けに、NeoForge 版から Discord
 
 ## ライセンス
 
-MIT ライセンス（[LICENSE](LICENSE)）の下で公開しています。一部に他 Mod から移植した処理を含んでおり、該当箇所のソースコードに出典・バージョン・ライセンスを明記しています。
+MIT ライセンス（[LICENSE](LICENSE)）の下で公開しています。一部に他 Mod から移植した処理を含んでおり、該当箇所のソースコードに出典・バージョン・ライセンスを明記しています(たとえば AE2 から移植した描画の処理は、元の LGPL-3.0 のままです)。
